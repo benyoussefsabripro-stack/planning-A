@@ -1,4 +1,10 @@
-import React, { useMemo, useState, useEffect } from "react";
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>hadiths</title>
+React, { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Bookmark, BookmarkCheck, Share2, Shuffle, Settings, Moon, Sun, Filter, Globe, BookOpen, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
