@@ -4,6 +4,11 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>MB Gardiennage — Planning sécurisé</title>
+
+<!-- Firebase SDK (version compat = la plus simple en HTML) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
 <style>
   :root{
     --bg:#0b1220; --text:#e5e7eb; --muted:#9aa3b2;
@@ -28,10 +33,7 @@
   .btn:hover{background:#142a57}
   .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
   .btn.ghost{background:transparent}
-  .team-tile{
-    margin:6px 0 14px;background:#0e1b33;border:1px solid #253a6b;padding:16px;border-radius:16px;
-    display:flex;align-items:center;justify-content:space-between;cursor:pointer;box-shadow:var(--shadow)
-  }
+  .team-tile{margin:6px 0 14px;background:#0e1b33;border:1px solid #253a6b;padding:16px;border-radius:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;box-shadow:var(--shadow)}
   .team-tile:hover{background:#11244a}
   .team-title{font-weight:900}
   .team-chip{background:#142a57;border:1px solid #2b4a8a;padding:8px 10px;border-radius:12px}
@@ -154,13 +156,11 @@
       </div>
     </div>
 
-    <!-- Tu cliques d’abord sur la tuile équipe -->
     <div id="teamBtn" class="team-tile">
       <span class="team-title">Équipe IÉSEG</span>
       <span class="team-chip">Afficher les noms ▶</span>
     </div>
 
-    <!-- Puis les 8 noms apparaissent -->
     <div id="teamSection" class="team-section">
       <h3 class="sec-title">Équipe IÉSEG</h3>
       <div class="home-grid" id="homeGrid"></div>
@@ -285,6 +285,22 @@
 <div class="toast" id="toast">Enregistré ✅</div>
 
 <script>
+/* ====== Firebase init (avec TA config) ====== */
+const firebaseConfig = {
+  apiKey: "AIzaSyDzRKWYfnCiTQYogVQmYngfoCqGZlQxtJk",
+  authDomain: "planning-secu.firebaseapp.com",
+  databaseURL: "https://planning-secu-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "planning-secu",
+  storageBucket: "planning-secu.firebasestorage.app",
+  messagingSenderId: "688317228037",
+  appId: "1:688317228037:web:eb57c7efdbfd081c96286c",
+  measurementId: "G-H5XDZDJMH5"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+/* Un seul “document” (noeud) pour tout le planning. Tu peux changer le chemin si tu veux séparer par équipe/année. */
+const CLOUD_PATH = "mbgardiennage/ieseg";
+
 /* ===== SÉCURITÉ ===== */
 const ADMIN_PASS="securite";
 const PERSON_PASSES={Momo:"1",Lucas:"2",Sabri:"3",Sofiane:"4",Hamid:"5",Adam:"6",Iddir:"7",Karim:"8"};
@@ -305,12 +321,30 @@ function parseTimeToHours(t){const m=t.match(/^(\d{1,2})h(?:(\d{2}))?$/i);if(!m)
 function computeHoursFromDetail(detail){const times=(detail.match(/\d{1,2}h\d{0,2}/g)||[]).map(parseTimeToHours).filter(v=>v!=null);let s=0;for(let i=0;i+1<times.length;i+=2)s+=times[i+1]-times[i];return Math.round(s*2)/2;}
 function showToast(t){const el=document.getElementById('toast');el.textContent=t||"OK";el.style.display='block';setTimeout(()=>el.style.display='none',1500);}
 
-/* ===== STOCKAGE ===== */
+/* ===== STOCKAGE local (fallback offline) ===== */
 const STORAGE_KEY="planning_secure_v1";
-function saveState(silent=false){const data={people,peopleData,current,currentYear,currentMonth};localStorage.setItem(STORAGE_KEY,JSON.stringify(data));if(!silent)showToast("Enregistré ✅");}
-function loadState(){try{const s=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");if(!s)return;people=s.people||people;Object.assign(peopleData,s.peopleData||{});current=s.current||current;currentYear=s.currentYear||currentYear;currentMonth=s.currentMonth||currentMonth;}catch{}}
+function saveLocal(){const data={people,peopleData,current,currentYear,currentMonth};localStorage.setItem(STORAGE_KEY,JSON.stringify(data));}
+function loadLocal(){try{const s=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");if(!s)return false;people=s.people||people;Object.assign(peopleData,s.peopleData||{});current=s.current||current;currentYear=s.currentYear||currentYear;currentMonth=s.currentMonth||currentMonth;return true;}catch{return false;}}
 
-/* ===== SEED : Sabri août rempli (exemple), autres vides ===== */
+/* ===== CLOUD (Firebase) ===== */
+async function cloudSave() {
+  const payload = { people, peopleData, current, currentYear, currentMonth, ts: Date.now() };
+  await db.ref(CLOUD_PATH).set(payload);
+  showToast("Sauvegardé en ligne ☁️✅");
+}
+async function cloudLoad() {
+  const snap = await db.ref(CLOUD_PATH).get();
+  if (!snap.exists()) return false;
+  const s = snap.val();
+  if (s.people) people = s.people;
+  if (s.peopleData) { for (const k in peopleData) delete peopleData[k]; Object.assign(peopleData, s.peopleData); }
+  current = s.current ?? current;
+  currentYear = s.currentYear ?? currentYear;
+  currentMonth = s.currentMonth ?? currentMonth;
+  return true;
+}
+
+/* ===== SEED : Sabri août (exemple), autres vides ===== */
 function seedDefaultsIfEmpty(){
   const hasSabri=peopleData["Sabri"]&&peopleData["Sabri"][2025]&&peopleData["Sabri"][2025][7];
   if(!hasSabri){
@@ -338,7 +372,7 @@ const teamBtn=document.getElementById('teamBtn');
 const teamSection=document.getElementById('teamSection');
 teamBtn.onclick=()=>{teamSection.style.display='block';teamBtn.style.display='none';renderHome();};
 document.getElementById('adminBtn').onclick=()=>{const p=prompt("Mot de passe administrateur :");if(p===ADMIN_PASS){authRole="admin";authUser=null;editUnlocked=true;enterApp("Sabri");showToast("Admin connecté ✅");}else alert("Mot de passe incorrect.");};
-document.getElementById('aboutBtn').onclick=()=>alert("Clique d’abord sur « Équipe IÉSEG », puis choisis un nom et entre son mot de passe. Admin = securite.");
+document.getElementById('aboutBtn').onclick=()=>alert("Clique « Équipe IÉSEG », choisis un nom et entre son mot de passe. Admin = securite.");
 
 function renderHome(){
   const grid=document.getElementById('homeGrid');grid.innerHTML='';
@@ -378,7 +412,7 @@ function renderSidebar(){
   visible.forEach((name,i)=>{
     const el=document.createElement('div');el.className='person'+(name===current?' active':'');
     el.innerHTML=`<span class="badge" style="background:${colors[i%colors.length]}"></span>${name}`;
-    el.onclick=()=>{current=name;document.querySelectorAll('.person').forEach(p=>p.classList.remove('active'));el.classList.add('active');saveState(true);render();closeMenu();};
+    el.onclick=()=>{current=name;document.querySelectorAll('.person').forEach(p=>p.classList.remove('active'));el.classList.add('active');saveLocal();render();closeMenu();};
     peopleEl.appendChild(el);
   });
   document.getElementById('lockInfo').textContent=editUnlocked?"✅ Admin (édition autorisée)":"👁️ Lecture seule";
@@ -431,31 +465,36 @@ function closeEditor(){mb.style.display='none';editDay=null;}
 document.getElementById('btnClose').onclick=closeEditor;
 document.querySelectorAll('.chip[data-preset]').forEach(ch=>{ch.onclick=()=>{const p=JSON.parse(ch.dataset.preset);fType.value=p.type||'C';fDetail.value=p.detail||'';if(p.autoHours&&p.detail){const h=computeHoursFromDetail(p.detail);fHours.value=(isFinite(h)?h:0);}}});
 document.getElementById('copyPrev').onclick=()=>{if(editDay==null)return;const prev=ensureMonth(current,currentYear,currentMonth).days[editDay-1];if(prev){fType.value=prev.type;fHours.value=prev.hours;fDetail.value=prev.detail||'';fNote.value=prev.note||'';}};
-document.getElementById('btnSave').onclick=()=>{if(!editUnlocked)return alert("Édition admin requise.");if(editDay==null)return;
+document.getElementById('btnSave').onclick=async()=>{if(!editUnlocked)return alert("Édition admin requise.");if(editDay==null)return;
   ensureMonth(current,currentYear,currentMonth).days[editDay]={type:fType.value,hours:Number(fHours.value||0),detail:fDetail.value.trim(),note:fNote.value.trim()};
-  saveState();closeEditor();render();
+  saveLocal(); try{await cloudSave();}catch{showToast("Sauvegarde locale (offline) ✅");}
+  closeEditor();render();
 };
-document.getElementById('btnDel').onclick=()=>{if(!editUnlocked)return alert("Édition admin requise.");if(editDay==null)return;
-  delete ensureMonth(current,currentYear,currentMonth).days[editDay];saveState();closeEditor();render();
+document.getElementById('btnDel').onclick=async()=>{if(!editUnlocked)return alert("Édition admin requise.");if(editDay==null)return;
+  delete ensureMonth(current,currentYear,currentMonth).days[editDay];
+  saveLocal(); try{await cloudSave();}catch{}
+  closeEditor();render();
 };
-document.getElementById('btnWeek').onclick=()=>{if(!editUnlocked)return alert("Édition admin requise.");if(editDay==null)return;
+document.getElementById('btnWeek').onclick=async()=>{if(!editUnlocked)return alert("Édition admin requise.");if(editDay==null)return;
   const dt=new Date(currentYear,currentMonth,editDay),mon=mondayOf(dt),dim=new Date(currentYear,currentMonth+1,0).getDate();
   const payload={type:fType.value,hours:Number(fHours.value||0),detail:fDetail.value.trim(),note:fNote.value.trim()};
   const store=ensureMonth(current,currentYear,currentMonth).days;for(let i=0;i<7;i++){const d=mon.getDate()+i;if(d>=1&&d<=dim){store[d]={...payload};}}
-  saveState();closeEditor();render();
+  saveLocal(); try{await cloudSave();}catch{}
+  closeEditor();render();
 };
-document.getElementById('btnRange').onclick=()=>{if(!editUnlocked)return alert("Édition admin requise.");const ans=prompt("Appliquer du jour X au jour Y (ex: 5-12) :","");if(!ans)return;
+document.getElementById('btnRange').onclick=async()=>{if(!editUnlocked)return alert("Édition admin requise.");const ans=prompt("Appliquer du jour X au jour Y (ex: 5-12) :","");if(!ans)return;
   const m=ans.match(/^\s*(\d{1,2})\s*[-–]\s*(\d{1,2})\s*$/);if(!m)return alert("Format invalide. Exemple : 5-12");
   let a=parseInt(m[1],10),b=parseInt(m[2],10);if(a>b)[a,b]=[b,a];
   const dim=new Date(currentYear,currentMonth+1,0).getDate();a=Math.max(1,Math.min(dim,a));b=Math.max(1,Math.min(dim,b));
   const payload={type:fType.value,hours:Number(fHours.value||0),detail:fDetail.value.trim(),note:fNote.value.trim()};
   const store=ensureMonth(current,currentYear,currentMonth).days;for(let d=a;d<=b;d++){store[d]={...payload};}
-  saveState();closeEditor();render();
+  saveLocal(); try{await cloudSave();}catch{}
+  closeEditor();render();
 };
 
 /* ===== Mois ===== */
 const mpb=document.getElementById('mpb'),monthGrid=document.getElementById('monthGrid'),curYearEl=document.getElementById('curYear');
-document.getElementById('monthLabel').onclick=()=>{curYearEl.textContent=currentYear;monthGrid.innerHTML='';monthNames.forEach((n,i)=>{const b=document.createElement('button');b.textContent=n[0].toUpperCase()+n.slice(1);b.onclick=()=>{currentMonth=i;mpb.style.display='none';saveState(true);render();};monthGrid.appendChild(b);});mpb.style.display='flex';};
+document.getElementById('monthLabel').onclick=()=>{curYearEl.textContent=currentYear;monthGrid.innerHTML='';monthNames.forEach((n,i)=>{const b=document.createElement('button');b.textContent=n[0].toUpperCase()+n.slice(1);b.onclick=()=>{currentMonth=i;mpb.style.display='none';saveLocal();cloudSave().catch(()=>{});render();};monthGrid.appendChild(b);});mpb.style.display='flex';};
 document.getElementById('mpClose').onclick=()=>mpb.style.display='none';
 mpb.addEventListener('click',e=>{if(e.target===mpb)mpb.style.display='none';});
 
@@ -470,19 +509,19 @@ document.getElementById('btnPeople').onclick=()=>{if(authRole!=="admin")return a
 };
 document.getElementById('pmAdd').onclick=()=>{const row=document.createElement('div');row.className='pm-row';const inp=document.createElement('input');inp.placeholder='Nouveau nom';const del=document.createElement('button');del.textContent='Supprimer';del.className='danger';del.onclick=()=>row.remove();row.appendChild(inp);row.appendChild(del);pmList.appendChild(row);};
 document.getElementById('pmCancel').onclick=()=>pm.style.display='none';
-document.getElementById('pmSave').onclick=()=>{const inputs=pmList.querySelectorAll('input');const list=[];inputs.forEach(i=>{const v=i.value.trim();if(v&&!list.includes(v))list.push(v);});if(!list.length)return alert("Il faut au moins un nom.");
+document.getElementById('pmSave').onclick=async()=>{const inputs=pmList.querySelectorAll('input');const list=[];inputs.forEach(i=>{const v=i.value.trim();if(v&&!list.includes(v))list.push(v);});if(!list.length)return alert("Il faut au moins un nom.");
   const newData={};list.forEach(n=>newData[n]=peopleData[n]||{});if(!list.includes(current))current=list[0];people=list;for(const k in peopleData)delete peopleData[k];Object.assign(peopleData,newData);
-  pm.style.display='none';saveState();renderSidebar();render();
+  pm.style.display='none';saveLocal(); try{await cloudSave();}catch{} renderSidebar();render();
 };
 pm.addEventListener('click',e=>{if(e.target===pm)pm.style.display='none';});
 
 /* ===== Header actions ===== */
 document.getElementById('btnPdf').onclick=()=>window.print();
 document.getElementById('btnEdit').onclick=()=>{if(authRole!=="admin")return;editing=!editing;document.getElementById('btnEdit').textContent=editing?'Quitter l’édition':'Activer l’édition';if(!editing)document.getElementById('mb').style.display='none';render();};
-document.getElementById('btnSaveAll').onclick=()=>saveState();
+document.getElementById('btnSaveAll').onclick=async()=>{saveLocal(); try{await cloudSave();}catch{showToast("Sauvegarde locale (offline) ✅");}};
 document.getElementById('btnBackup').onclick=()=>{const blob=new Blob([localStorage.getItem(STORAGE_KEY)||"{}"],{type:"application/json"});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download="planning.json";a.click();URL.revokeObjectURL(a.href);};
 document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
-document.getElementById('fileImport').onchange=async e=>{const f=e.target.files[0];if(!f)return;const t=await f.text();localStorage.setItem(STORAGE_KEY,t);loadState();renderSidebar();render();showToast("Planning importé ✔️");};
+document.getElementById('fileImport').onchange=async e=>{const f=e.target.files[0];if(!f)return;const t=await f.text();localStorage.setItem(STORAGE_KEY,t);loadLocal();renderSidebar();render(); try{await cloudSave();}catch{} showToast("Planning importé ☁️");};
 
 /* ===== Drawer mobile ===== */
 const sideEl=document.querySelector('.side');const overlayEl=document.getElementById('overlay');const menuBtn=document.getElementById('menuBtn');
@@ -492,12 +531,19 @@ function closeMenu(){sideEl.classList.remove('open');document.body.classList.rem
 menuBtn.addEventListener('click',openMenu);overlayEl.addEventListener('click',closeMenu);window.addEventListener('resize',applyDrawerMode);applyDrawerMode();
 
 /* ===== Boot ===== */
-loadState();seedDefaultsIfEmpty();
-document.getElementById('now').textContent=new Date().toLocaleString('fr-FR');
-document.getElementById('home').style.display='flex';document.getElementById('app').style.display='none';
+(async ()=>{
+  const hadLocal = loadLocal();
+  let loadedCloud = false;
+  try { loadedCloud = await cloudLoad(); } catch { loadedCloud = false; }
+  if (!hadLocal && !loadedCloud) seedDefaultsIfEmpty();
+
+  document.getElementById('now').textContent=new Date().toLocaleString('fr-FR');
+  document.getElementById('home').style.display='flex';
+  document.getElementById('app').style.display='none';
+})();
 </script>
 
-<!-- Overlay pour tiroir -->
+<!-- Overlay pour tiroir mobile -->
 <div id="overlay"></div>
 </body>
 </html>
