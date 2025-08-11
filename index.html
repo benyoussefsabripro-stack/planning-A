@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Planning sécurisé — Accueil + Mobile</title>
+<title>MB Gardiennage — Planning sécurisé</title>
 <style>
   :root{
     --bg:#0b1220; --text:#e5e7eb; --muted:#9aa3b2;
@@ -18,30 +18,38 @@
   html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
 
   /* ===== Accueil ===== */
-  #home{
-    min-height:100vh; display:flex; align-items:center; justify-content:center;
-    background: var(--grad); padding:24px;
-  }
-  .home-card{width:100%; max-width:780px; background:var(--card); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow); padding:18px}
-  .home-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
-  .home-title{font-weight:900;font-size:20px;color:var(--brand)}
-  .home-grid{display:grid; gap:12px; grid-template-columns: repeat(2, 1fr)}
-  @media (min-width:720px){ .home-grid{ grid-template-columns: repeat(4, 1fr) } }
-  .person-card{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:12px; display:flex; flex-direction:column; align-items:center; gap:10px; cursor:pointer; transition:transform .12s ease, background .12s ease}
-  .person-card:hover{ transform:translateY(-1px); background:var(--sidebar-hover) }
-  .avatar{ width:64px;height:64px;border-radius:50%;border:2px solid var(--border);background:#17345f; display:flex;align-items:center;justify-content:center;font-weight:900; overflow:hidden }
-  .avatar img{width:100%;height:100%;object-fit:cover;display:block}
-  .pname{font-weight:900}
-  .pwd-hint{font-size:12px;color:var(--muted)}
+  #home{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--grad);padding:24px}
+  .home-card{width:100%;max-width:840px;background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:22px}
+  .home-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+  .home-title{font-weight:900;font-size:20px;color:#cfe0ff}
+  .home-sub{color:var(--muted);margin:6px 0 14px}
+  .home-actions{display:flex;gap:8px}
   .btn{background:#13213d;border:1px solid #2a3d6d;color:#e5e7eb;border-radius:12px;padding:10px 12px;font-weight:800;cursor:pointer;box-shadow:var(--shadow)}
   .btn:hover{background:#142a57}
   .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
   .btn.ghost{background:transparent}
+  .team-tile{
+    margin:6px 0 14px;background:#0e1b33;border:1px solid #253a6b;padding:16px;border-radius:16px;
+    display:flex;align-items:center;justify-content:space-between;cursor:pointer;box-shadow:var(--shadow)
+  }
+  .team-tile:hover{background:#11244a}
+  .team-title{font-weight:900}
+  .team-chip{background:#142a57;border:1px solid #2b4a8a;padding:8px 10px;border-radius:12px}
+  .team-section{display:none}
+  .sec-title{margin:0 0 10px;font-size:16px;color:#bcd7ff}
+  .home-grid{display:grid;gap:12px;grid-template-columns:repeat(2,1fr)}
+  @media(min-width:720px){.home-grid{grid-template-columns:repeat(4,1fr)}}
+  .person-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;transition:transform .12s ease, background .12s ease}
+  .person-card:hover{transform:translateY(-1px);background:var(--sidebar-hover)}
+  .avatar{width:64px;height:64px;border-radius:50%;border:2px solid var(--border);background:#17345f;display:flex;align-items:center;justify-content:center;font-weight:900;overflow:hidden}
+  .avatar img{width:100%;height:100%;object-fit:cover;display:block}
+  .pname{font-weight:900}
+  .pwd-hint{font-size:12px;color:var(--muted)}
 
   /* ===== App ===== */
   .app{display:grid;grid-template-columns:270px 1fr;min-height:100vh}
   .side{background:var(--sidebar);border-right:1px solid var(--sidebar-border);padding:16px 12px}
-  .logo{font-weight:900;font-size:18px;letter-spacing:.2px;color:var(--brand);margin-bottom:12px}
+  .logo{font-weight:900;font-size:18px;letter-spacing:.2px;color:#cfe0ff;margin-bottom:12px}
   .people{display:flex;flex-direction:column;gap:6px}
   .person{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;font-weight:700}
   .person:hover{background:var(--sidebar-hover)}
@@ -49,8 +57,7 @@
   .badge{width:10px;height:10px;border-radius:50%}
   .lock{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
 
-  header{ position:sticky; top:0; background:var(--bg); z-index:15;
-    display:flex;gap:10px;align-items:center;justify-content:space-between;padding:12px 12px 10px}
+  header{position:sticky;top:0;background:var(--bg);z-index:15;display:flex;gap:10px;align-items:center;justify-content:space-between;padding:12px 12px 10px}
   h1{margin:0;font-size:20px}
   #monthLabel{cursor:pointer;border-bottom:2px dashed transparent}
   #monthLabel:hover{border-color:#2b5cff}
@@ -85,22 +92,18 @@
   footer{color:var(--muted);text-align:center;padding:14px}
   .small{font-size:11px}
 
-  /* Modals / forms */
+  /* Modals */
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
   .chip{background:var(--chip);border:1px solid var(--chip-bd);border-radius:999px;padding:7px 10px;font-weight:800;cursor:pointer}
   .chip:hover{background:#182a55}
   .modal-back{position:fixed;inset:0;background:rgba(2,6,23,.45);display:none;align-items:center;justify-content:center;padding:14px;z-index:30}
   .modal{background:#0f172a;max-width:620px;width:100%;border-radius:16px;padding:14px;border:1px solid #1f2a44;box-shadow:0 22px 48px rgba(0,0,0,.5)}
-  .modal h2,.modal h3{margin:0 0 8px;font-size:16px}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   label{font-size:12px;color:#cbd5e1;font-weight:700}
   input,select{width:100%;padding:10px;border:1px solid #2a3d6d;border-radius:10px;font-size:14px;background:#091124;color:#e5e7eb}
   .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap}
-  .pm-list{display:flex;flex-direction:column;gap:8px;margin:10px 0}
-  .pm-row{display:flex;gap:8px}
-  .pm-row input{flex:1}
 
-  /* Overlay + tiroir mobile */
+  /* Drawer mobile */
   #overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;z-index:25}
   .side.drawer{position:fixed;top:0;left:0;height:100vh;width:86vw;max-width:320px;transform:translateX(-100%);transition:transform .25s ease;z-index:30;box-shadow:0 20px 60px rgba(0,0,0,.25)}
   .side.drawer.open{transform:translateX(0)}
@@ -117,7 +120,6 @@
     .card{min-height:88px;padding:10px}
     .pill{padding:8px 12px;font-size:14px}
     .chips .chip{padding:9px 12px;font-size:14px}
-    .legend{margin-top:6px}
     h1{font-size:18px}
   }
   @media (max-width:390px){
@@ -126,14 +128,13 @@
     .pill{font-size:13px}
   }
 
-  /* Toast + print */
   .toast{position:fixed;right:18px;bottom:18px;background:#111827;color:#fff;padding:10px 14px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.2);display:none;z-index:50}
   @media print{
-    #home, .side, header .toolbar, #menuBtn, #overlay, .modal-back, .small, .toast, #peopleModal, #statsModal{display:none}
+    #home,.side,header .toolbar,#menuBtn,#overlay,.modal-back,.small,.toast{display:none}
     .card{break-inside:avoid}
     .card.work .date{font-weight:900}
     .card.work .pill{font-weight:900}
-    body{background:white}
+    body{background:#fff}
   }
 </style>
 </head>
@@ -143,14 +144,29 @@
 <section id="home">
   <div class="home-card">
     <div class="home-header">
-      <div class="home-title">🔐 Accès au planning</div>
+      <div>
+        <div class="home-title">MB Gardiennage — Planning</div>
+        <div class="home-sub">Bienvenue sur l’espace de consultation des plannings de l’entreprise <b>MB Gardiennage</b>.</div>
+      </div>
       <div class="home-actions">
         <button class="btn" id="adminBtn">Admin</button>
         <button class="btn ghost" id="aboutBtn" title="Infos">ℹ️</button>
       </div>
     </div>
-    <p class="pwd-hint" style="margin:4px 0 12px">Choisis une personne. Mot de passe (ex : Momo = <b>1</b>). Admin = <b>securite</b>.</p>
-    <div class="home-grid" id="homeGrid"></div>
+
+    <!-- Tu cliques d’abord sur la tuile équipe -->
+    <div id="teamBtn" class="team-tile">
+      <span class="team-title">Équipe IÉSEG</span>
+      <span class="team-chip">Afficher les noms ▶</span>
+    </div>
+
+    <!-- Puis les 8 noms apparaissent -->
+    <div id="teamSection" class="team-section">
+      <h3 class="sec-title">Équipe IÉSEG</h3>
+      <div class="home-grid" id="homeGrid"></div>
+    </div>
+
+    <p class="pwd-hint" style="margin-top:10px">Chaque personne a son mot de passe (Momo=<b>1</b>, Lucas=<b>2</b>, …, Karim=<b>8</b>). Admin = <b>securite</b>.</p>
   </div>
 </section>
 
@@ -187,7 +203,6 @@
         <span class="tag"><span class="sw" style="background:var(--g)"></span> G</span>
         <span class="tag"><span class="sw" style="background:var(--r)"></span> Ronde/Fin spéciale</span>
       </div>
-
       <div id="totals" class="totals"></div>
       <div id="cal" class="calendar" aria-live="polite"></div>
       <p class="small">Dernière mise à jour : <span id="now"></span></p>
@@ -271,18 +286,18 @@
 
 <script>
 /* ===== SÉCURITÉ ===== */
-const ADMIN_PASS = "securite";
-const PERSON_PASSES = { Momo:"1", Lucas:"2", Sabri:"3", Sofiane:"4", Hamid:"5", Adam:"6", Iddir:"7", Karim:"8" };
-let authRole=null, authUser=null, editUnlocked=false;
+const ADMIN_PASS="securite";
+const PERSON_PASSES={Momo:"1",Lucas:"2",Sabri:"3",Sofiane:"4",Hamid:"5",Adam:"6",Iddir:"7",Karim:"8"};
+let authRole=null,authUser=null,editUnlocked=false;
 
 /* ===== ÉTAT ===== */
-let current="Sabri", currentYear=2025, currentMonth=7, editing=false, editDay=null;
+let current="Sabri",currentYear=2025,currentMonth=7,editing=false,editDay=null;
 let people=["Momo","Lucas","Sabri","Sofiane","Hamid","Adam","Iddir","Karim"];
-const peopleData={}; // peopleData[name][year][month]={days:{}}
+const peopleData={}; // name->year->month->{days:{}}
 const monthNames=["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
 
 /* ===== HELPERS ===== */
-function ensureMonth(name,y,m){ if(!peopleData[name]) peopleData[name]={}; if(!peopleData[name][y]) peopleData[name][y]={}; if(!peopleData[name][y][m]) peopleData[name][y][m]={days:{}}; return peopleData[name][y][m]; }
+function ensureMonth(name,y,m){if(!peopleData[name])peopleData[name]={};if(!peopleData[name][y])peopleData[name][y]={};if(!peopleData[name][y][m])peopleData[name][y][m]={days:{}};return peopleData[name][y][m];}
 const colorOf=t=>({C:'var(--c)',P:'var(--p)',G:'var(--g)',R:'var(--r)'}[t]||'#999');
 function weekNumber(dt){const t=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate()));const d=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-d);const y0=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil((((t-y0)/86400000)+1)/7);}
 function mondayOf(dt){const d=(dt.getDay()+6)%7;const m=new Date(dt);m.setDate(dt.getDate()-d);return m;}
@@ -295,7 +310,7 @@ const STORAGE_KEY="planning_secure_v1";
 function saveState(silent=false){const data={people,peopleData,current,currentYear,currentMonth};localStorage.setItem(STORAGE_KEY,JSON.stringify(data));if(!silent)showToast("Enregistré ✅");}
 function loadState(){try{const s=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");if(!s)return;people=s.people||people;Object.assign(peopleData,s.peopleData||{});current=s.current||current;currentYear=s.currentYear||currentYear;currentMonth=s.currentMonth||currentMonth;}catch{}}
 
-/* ===== SEED : Sabri août rempli, autres vides ===== */
+/* ===== SEED : Sabri août rempli (exemple), autres vides ===== */
 function seedDefaultsIfEmpty(){
   const hasSabri=peopleData["Sabri"]&&peopleData["Sabri"][2025]&&peopleData["Sabri"][2025][7];
   if(!hasSabri){
@@ -319,6 +334,12 @@ function seedDefaultsIfEmpty(){
 }
 
 /* ===== ACCUEIL ===== */
+const teamBtn=document.getElementById('teamBtn');
+const teamSection=document.getElementById('teamSection');
+teamBtn.onclick=()=>{teamSection.style.display='block';teamBtn.style.display='none';renderHome();};
+document.getElementById('adminBtn').onclick=()=>{const p=prompt("Mot de passe administrateur :");if(p===ADMIN_PASS){authRole="admin";authUser=null;editUnlocked=true;enterApp("Sabri");showToast("Admin connecté ✅");}else alert("Mot de passe incorrect.");};
+document.getElementById('aboutBtn').onclick=()=>alert("Clique d’abord sur « Équipe IÉSEG », puis choisis un nom et entre son mot de passe. Admin = securite.");
+
 function renderHome(){
   const grid=document.getElementById('homeGrid');grid.innerHTML='';
   ["Momo","Lucas","Sabri","Sofiane","Hamid","Adam","Iddir","Karim"].forEach(name=>{
@@ -327,10 +348,7 @@ function renderHome(){
     card.onclick=()=>requestAccess(name);grid.appendChild(card);
   });
 }
-document.getElementById('adminBtn').onclick=()=>{const p=prompt("Mot de passe administrateur :");if(p===ADMIN_PASS){authRole="admin";authUser=null;editUnlocked=true;enterApp("Sabri");showToast("Admin connecté ✅");}else alert("Mot de passe incorrect.");};
-document.getElementById('aboutBtn').onclick=()=>alert("Accueil → choisis un nom puis tape son mot de passe. Admin = securite.");
 
-/* Auth */
 function requestAccess(name){
   const pwd=prompt(`Mot de passe pour ${name} (ou "securite") :`); if(!pwd)return;
   if(pwd===ADMIN_PASS){authRole="admin";authUser=null;editUnlocked=true;enterApp(name);showToast("Admin connecté ✅");}
@@ -338,7 +356,7 @@ function requestAccess(name){
   else alert("Mot de passe incorrect.");
 }
 
-/* Entrer / Quitter app */
+/* ===== Entrer / Quitter app ===== */
 function enterApp(initialName){
   current=initialName||current;
   document.getElementById('home').style.display='none';
@@ -347,7 +365,7 @@ function enterApp(initialName){
   document.getElementById('btnEdit').disabled=(authRole!=="admin");
   renderSidebar(); render(); document.getElementById('now').textContent=new Date().toLocaleString('fr-FR');
 }
-function goHome(){ editing=false; document.getElementById('app').style.display='none'; document.getElementById('home').style.display='flex'; }
+function goHome(){editing=false;document.getElementById('app').style.display='none';document.getElementById('home').style.display='flex';}
 document.getElementById('btnHome').onclick=goHome;
 document.getElementById('btnLogout').onclick=()=>{authRole=null;authUser=null;editUnlocked=false;goHome();};
 
@@ -373,7 +391,7 @@ function render(){
   const store=ensureMonth(current,currentYear,currentMonth);const days=store.days;
   const cal=document.getElementById('cal');cal.innerHTML='';
   ['lun','mar','mer','jeu','ven','sam','dim'].forEach(d=>{const el=document.createElement('div');el.className='dow';el.textContent=d;cal.appendChild(el);});
-  const first=new Date(currentYear,currentMonth,1), offset=(first.getDay()+6)%7, dim=new Date(currentYear,currentMonth+1,0).getDate();
+  const first=new Date(currentYear,currentMonth,1),offset=(first.getDay()+6)%7,dim=new Date(currentYear,currentMonth+1,0).getDate();
   for(let i=0;i<offset;i++){const e=document.createElement('div');e.className='card empty';cal.appendChild(e);}
   for(let day=1;day<=dim;day++){
     const card=document.createElement('div');card.className='card';card.dataset.day=day;
@@ -390,95 +408,96 @@ function render(){
     card.onclick=()=> (editing&&editUnlocked) && openEditor(day);
     cal.appendChild(card);
   }
-  const filled=offset+dim, rest=(7-(filled%7))%7; for(let i=0;i<rest;i++){const e=document.createElement('div');e.className='card empty';cal.appendChild(e);}
+  const filled=offset+dim,rest=(7-(filled%7))%7;for(let i=0;i<rest;i++){const e=document.createElement('div');e.className='card empty';cal.appendChild(e);}
   renderTotals(days);
 }
 function renderTotals(days){
   const totals=document.getElementById('totals');totals.innerHTML='';let monthSum=0;Object.values(days).forEach(v=>monthSum+=Number(v.hours||0));
   totals.appendChild(box('Total mois',`${monthSum.toFixed(2).replace('.',',')} h`));
-  const weeks={},dim=new Date(currentYear,currentMonth+1,0).getDate();for(let d=1;d<=dim;d++){if(days[d]){const w=weekNumber(new Date(currentYear,currentMonth,d));weeks[w]=(weeks[w]||0)+Number(days[d].hours||0);}}
+  const weeks={},dim=new Date(currentYear,currentMonth+1,0).getDate();
+  for(let d=1;d<=dim;d++){if(days[d]){const w=weekNumber(new Date(currentYear,currentMonth,d));weeks[w]=(weeks[w]||0)+Number(days[d].hours||0);}}
   Object.keys(weeks).sort((a,b)=>a-b).forEach(w=>totals.appendChild(box(`Sem. ${w}`,`${weeks[w].toFixed(2).replace('.',',')} h`)));
   function box(t,v){const el=document.createElement('div');el.className='box';el.innerHTML=`<h3>${t}</h3><div>${v}</div>`;return el;}
 }
 
-/* ===== Modale jour ===== */
-const mb=document.getElementById('mb'); const fType=document.getElementById('fType'), fHours=document.getElementById('fHours'), fDetail=document.getElementById('fDetail'), fNote=document.getElementById('fNote');
+/* ===== Modale jour (admin) ===== */
+const mb=document.getElementById('mb');const fType=document.getElementById('fType'),fHours=document.getElementById('fHours'),fDetail=document.getElementById('fDetail'),fNote=document.getElementById('fNote');
 function openEditor(day){
   editDay=day;const d=ensureMonth(current,currentYear,currentMonth).days[day]||{type:'C',hours:'',detail:'',note:''};
   document.getElementById('mTitle').textContent=`${String(day).padStart(2,'0')}/${String(currentMonth+1).padStart(2,'0')}/${currentYear} — ${current}`;
-  fType.value=d.type||'C';fHours.value=(d.hours??'');fDetail.value=d.detail||'';fNote.value=d.note||''; mb.style.display='flex';
+  fType.value=d.type||'C';fHours.value=(d.hours??'');fDetail.value=d.detail||'';fNote.value=d.note||'';mb.style.display='flex';
 }
 function closeEditor(){mb.style.display='none';editDay=null;}
 document.getElementById('btnClose').onclick=closeEditor;
-document.querySelectorAll('.chip[data-preset]').forEach(ch=>{ch.onclick=()=>{const p=JSON.parse(ch.dataset.preset);fType.value=p.type||'C';fDetail.value=p.detail||''; if(p.autoHours&&p.detail){const h=computeHoursFromDetail(p.detail);fHours.value=(isFinite(h)?h:0);} }});
-document.getElementById('copyPrev').onclick=()=>{if(editDay==null)return;const prev=ensureMonth(current,currentYear,currentMonth).days[editDay-1]; if(prev){fType.value=prev.type;fHours.value=prev.hours;fDetail.value=prev.detail||'';fNote.value=prev.note||'';}};
-document.getElementById('btnSave').onclick=()=>{if(!editUnlocked)return alert("Édition admin requise."); if(editDay==null)return;
+document.querySelectorAll('.chip[data-preset]').forEach(ch=>{ch.onclick=()=>{const p=JSON.parse(ch.dataset.preset);fType.value=p.type||'C';fDetail.value=p.detail||'';if(p.autoHours&&p.detail){const h=computeHoursFromDetail(p.detail);fHours.value=(isFinite(h)?h:0);}}});
+document.getElementById('copyPrev').onclick=()=>{if(editDay==null)return;const prev=ensureMonth(current,currentYear,currentMonth).days[editDay-1];if(prev){fType.value=prev.type;fHours.value=prev.hours;fDetail.value=prev.detail||'';fNote.value=prev.note||'';}};
+document.getElementById('btnSave').onclick=()=>{if(!editUnlocked)return alert("Édition admin requise.");if(editDay==null)return;
   ensureMonth(current,currentYear,currentMonth).days[editDay]={type:fType.value,hours:Number(fHours.value||0),detail:fDetail.value.trim(),note:fNote.value.trim()};
   saveState();closeEditor();render();
 };
-document.getElementById('btnDel').onclick=()=>{if(!editUnlocked)return alert("Édition admin requise."); if(editDay==null)return;
-  delete ensureMonth(current,currentYear,currentMonth).days[editDay]; saveState(); closeEditor(); render();
+document.getElementById('btnDel').onclick=()=>{if(!editUnlocked)return alert("Édition admin requise.");if(editDay==null)return;
+  delete ensureMonth(current,currentYear,currentMonth).days[editDay];saveState();closeEditor();render();
 };
-document.getElementById('btnWeek').onclick=()=>{if(!editUnlocked)return alert("Édition admin requise."); if(editDay==null)return;
-  const dt=new Date(currentYear,currentMonth,editDay); const mon=mondayOf(dt); const dim=new Date(currentYear,currentMonth+1,0).getDate();
+document.getElementById('btnWeek').onclick=()=>{if(!editUnlocked)return alert("Édition admin requise.");if(editDay==null)return;
+  const dt=new Date(currentYear,currentMonth,editDay),mon=mondayOf(dt),dim=new Date(currentYear,currentMonth+1,0).getDate();
   const payload={type:fType.value,hours:Number(fHours.value||0),detail:fDetail.value.trim(),note:fNote.value.trim()};
-  const store=ensureMonth(current,currentYear,currentMonth).days; for(let i=0;i<7;i++){const d=mon.getDate()+i; if(d>=1&&d<=dim){store[d]={...payload};}}
-  saveState(); closeEditor(); render();
+  const store=ensureMonth(current,currentYear,currentMonth).days;for(let i=0;i<7;i++){const d=mon.getDate()+i;if(d>=1&&d<=dim){store[d]={...payload};}}
+  saveState();closeEditor();render();
 };
-document.getElementById('btnRange').onclick=()=>{if(!editUnlocked)return alert("Édition admin requise."); const ans=prompt("Appliquer du jour X au jour Y (ex: 5-12) :",""); if(!ans)return;
-  const m=ans.match(/^\s*(\d{1,2})\s*[-–]\s*(\d{1,2})\s*$/); if(!m)return alert("Format invalide. Exemple : 5-12");
-  let a=parseInt(m[1],10), b=parseInt(m[2],10); if(a>b)[a,b]=[b,a];
-  const dim=new Date(currentYear,currentMonth+1,0).getDate(); a=Math.max(1,Math.min(dim,a)); b=Math.max(1,Math.min(dim,b));
+document.getElementById('btnRange').onclick=()=>{if(!editUnlocked)return alert("Édition admin requise.");const ans=prompt("Appliquer du jour X au jour Y (ex: 5-12) :","");if(!ans)return;
+  const m=ans.match(/^\s*(\d{1,2})\s*[-–]\s*(\d{1,2})\s*$/);if(!m)return alert("Format invalide. Exemple : 5-12");
+  let a=parseInt(m[1],10),b=parseInt(m[2],10);if(a>b)[a,b]=[b,a];
+  const dim=new Date(currentYear,currentMonth+1,0).getDate();a=Math.max(1,Math.min(dim,a));b=Math.max(1,Math.min(dim,b));
   const payload={type:fType.value,hours:Number(fHours.value||0),detail:fDetail.value.trim(),note:fNote.value.trim()};
-  const store=ensureMonth(current,currentYear,currentMonth).days; for(let d=a;d<=b;d++){store[d]={...payload};}
-  saveState(); closeEditor(); render();
+  const store=ensureMonth(current,currentYear,currentMonth).days;for(let d=a;d<=b;d++){store[d]={...payload};}
+  saveState();closeEditor();render();
 };
 
 /* ===== Mois ===== */
-const mpb=document.getElementById('mpb'), monthGrid=document.getElementById('monthGrid'), curYearEl=document.getElementById('curYear');
+const mpb=document.getElementById('mpb'),monthGrid=document.getElementById('monthGrid'),curYearEl=document.getElementById('curYear');
 document.getElementById('monthLabel').onclick=()=>{curYearEl.textContent=currentYear;monthGrid.innerHTML='';monthNames.forEach((n,i)=>{const b=document.createElement('button');b.textContent=n[0].toUpperCase()+n.slice(1);b.onclick=()=>{currentMonth=i;mpb.style.display='none';saveState(true);render();};monthGrid.appendChild(b);});mpb.style.display='flex';};
 document.getElementById('mpClose').onclick=()=>mpb.style.display='none';
 mpb.addEventListener('click',e=>{if(e.target===mpb)mpb.style.display='none';});
 
 /* ===== People manager (admin) ===== */
-const pm=document.getElementById('peopleModal'), pmList=document.getElementById('pmList');
+const pm=document.getElementById('peopleModal'),pmList=document.getElementById('pmList');
 document.getElementById('btnPeople').onclick=()=>{if(authRole!=="admin")return alert("Réservé à l’admin.");
-  pmList.innerHTML=''; people.forEach(name=>{const row=document.createElement('div');row.className='pm-row';
-    const inp=document.createElement('input');inp.value=name; const del=document.createElement('button');del.textContent='Supprimer';del.className='danger';
-    del.onclick=()=>{ if(!confirm(`Supprimer "${name}" ?`))return; if(current===name){const next=people.find(n=>n!==name)||"Sabri";current=next;} delete peopleData[name]; people=people.filter(n=>n!==name); row.remove(); };
-    row.appendChild(inp); row.appendChild(del); pmList.appendChild(row);
-  }); pm.style.display='flex';
+  pmList.innerHTML='';people.forEach(name=>{const row=document.createElement('div');row.className='pm-row';
+    const inp=document.createElement('input');inp.value=name;const del=document.createElement('button');del.textContent='Supprimer';del.className='danger';
+    del.onclick=()=>{if(!confirm(`Supprimer "${name}" ?`))return;if(current===name){const next=people.find(n=>n!==name)||"Sabri";current=next;}delete peopleData[name];people=people.filter(n=>n!==name);row.remove();};
+    row.appendChild(inp);row.appendChild(del);pmList.appendChild(row);
+  });pm.style.display='flex';
 };
 document.getElementById('pmAdd').onclick=()=>{const row=document.createElement('div');row.className='pm-row';const inp=document.createElement('input');inp.placeholder='Nouveau nom';const del=document.createElement('button');del.textContent='Supprimer';del.className='danger';del.onclick=()=>row.remove();row.appendChild(inp);row.appendChild(del);pmList.appendChild(row);};
 document.getElementById('pmCancel').onclick=()=>pm.style.display='none';
-document.getElementById('pmSave').onclick=()=>{const inputs=pmList.querySelectorAll('input');const newList=[];inputs.forEach(inp=>{const v=inp.value.trim();if(v&&!newList.includes(v))newList.push(v);});if(newList.length===0)return alert("Il faut au moins un nom.");
-  const newData={}; newList.forEach(n=>{newData[n]=peopleData[n]||{};}); if(!newList.includes(current))current=newList[0]; people=newList; for(const k in peopleData)delete peopleData[k]; Object.assign(peopleData,newData);
-  pm.style.display='none'; saveState(); renderSidebar(); render();
+document.getElementById('pmSave').onclick=()=>{const inputs=pmList.querySelectorAll('input');const list=[];inputs.forEach(i=>{const v=i.value.trim();if(v&&!list.includes(v))list.push(v);});if(!list.length)return alert("Il faut au moins un nom.");
+  const newData={};list.forEach(n=>newData[n]=peopleData[n]||{});if(!list.includes(current))current=list[0];people=list;for(const k in peopleData)delete peopleData[k];Object.assign(peopleData,newData);
+  pm.style.display='none';saveState();renderSidebar();render();
 };
 pm.addEventListener('click',e=>{if(e.target===pm)pm.style.display='none';});
 
 /* ===== Header actions ===== */
 document.getElementById('btnPdf').onclick=()=>window.print();
-document.getElementById('btnEdit').onclick=()=>{if(authRole!=="admin")return; editing=!editing; document.getElementById('btnEdit').textContent=editing?'Quitter l’édition':'Activer l’édition'; if(!editing) document.getElementById('mb').style.display='none'; render();};
+document.getElementById('btnEdit').onclick=()=>{if(authRole!=="admin")return;editing=!editing;document.getElementById('btnEdit').textContent=editing?'Quitter l’édition':'Activer l’édition';if(!editing)document.getElementById('mb').style.display='none';render();};
 document.getElementById('btnSaveAll').onclick=()=>saveState();
 document.getElementById('btnBackup').onclick=()=>{const blob=new Blob([localStorage.getItem(STORAGE_KEY)||"{}"],{type:"application/json"});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download="planning.json";a.click();URL.revokeObjectURL(a.href);};
 document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
 document.getElementById('fileImport').onchange=async e=>{const f=e.target.files[0];if(!f)return;const t=await f.text();localStorage.setItem(STORAGE_KEY,t);loadState();renderSidebar();render();showToast("Planning importé ✔️");};
 
-/* ===== Menu tiroir mobile ===== */
-const sideEl=document.querySelector('.side'); const overlayEl=document.getElementById('overlay'); const menuBtn=document.getElementById('menuBtn');
-function applyDrawerMode(){ if(window.matchMedia('(max-width:880px)').matches){ sideEl.classList.add('drawer'); }else{ sideEl.classList.remove('drawer','open'); document.body.classList.remove('menu-open'); overlayEl.style.display='none'; } }
-function openMenu(){ if(!sideEl.classList.contains('drawer'))return; sideEl.classList.add('open'); document.body.classList.add('menu-open'); overlayEl.style.display='block'; }
-function closeMenu(){ sideEl.classList.remove('open'); document.body.classList.remove('menu-open'); overlayEl.style.display='none'; }
-menuBtn.addEventListener('click',openMenu); overlayEl.addEventListener('click',closeMenu); window.addEventListener('resize',applyDrawerMode); applyDrawerMode();
+/* ===== Drawer mobile ===== */
+const sideEl=document.querySelector('.side');const overlayEl=document.getElementById('overlay');const menuBtn=document.getElementById('menuBtn');
+function applyDrawerMode(){if(window.matchMedia('(max-width:880px)').matches){sideEl.classList.add('drawer');}else{sideEl.classList.remove('drawer','open');document.body.classList.remove('menu-open');overlayEl.style.display='none';}}
+function openMenu(){if(!sideEl.classList.contains('drawer'))return;sideEl.classList.add('open');document.body.classList.add('menu-open');overlayEl.style.display='block';}
+function closeMenu(){sideEl.classList.remove('open');document.body.classList.remove('menu-open');overlayEl.style.display='none';}
+menuBtn.addEventListener('click',openMenu);overlayEl.addEventListener('click',closeMenu);window.addEventListener('resize',applyDrawerMode);applyDrawerMode();
 
 /* ===== Boot ===== */
-loadState(); seedDefaultsIfEmpty(); renderHome(); document.getElementById('now').textContent=new Date().toLocaleString('fr-FR'); 
-// Démarre sur l’accueil
-document.getElementById('home').style.display='flex'; document.getElementById('app').style.display='none';
+loadState();seedDefaultsIfEmpty();
+document.getElementById('now').textContent=new Date().toLocaleString('fr-FR');
+document.getElementById('home').style.display='flex';document.getElementById('app').style.display='none';
 </script>
 
-<!-- overlay pour tiroir -->
+<!-- Overlay pour tiroir -->
 <div id="overlay"></div>
 </body>
 </html>
