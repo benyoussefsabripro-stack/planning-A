@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>MB Gardiennage — Planning sécurisé</title>
 
-<!-- Firebase SDK (version compat = la plus simple en HTML) -->
+<!-- Firebase SDK (compat = simple pour page HTML) -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
@@ -285,11 +285,11 @@
 <div class="toast" id="toast">Enregistré ✅</div>
 
 <script>
-/* ====== Firebase init (avec TA config) ====== */
+/* ====== Firebase init (TA config) ====== */
 const firebaseConfig = {
   apiKey: "AIzaSyDzRKWYfnCiTQYogVQmYngfoCqGZlQxtJk",
   authDomain: "planning-secu.firebaseapp.com",
-  databaseURL: "https://planning-secu-default-rtdb.europe-west1.firebasedatabase.app",
+  databaseURL: "https://planning-secu-default-rtdb.europe-west1.firebasedatabase.app/", /* <-- slash final */
   projectId: "planning-secu",
   storageBucket: "planning-secu.firebasestorage.app",
   messagingSenderId: "688317228037",
@@ -298,7 +298,7 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-/* Un seul “document” (noeud) pour tout le planning. Tu peux changer le chemin si tu veux séparer par équipe/année. */
+/* Un chemin unique pour tout (tu peux le changer / le découper par année) */
 const CLOUD_PATH = "mbgardiennage/ieseg";
 
 /* ===== SÉCURITÉ ===== */
@@ -321,7 +321,7 @@ function parseTimeToHours(t){const m=t.match(/^(\d{1,2})h(?:(\d{2}))?$/i);if(!m)
 function computeHoursFromDetail(detail){const times=(detail.match(/\d{1,2}h\d{0,2}/g)||[]).map(parseTimeToHours).filter(v=>v!=null);let s=0;for(let i=0;i+1<times.length;i+=2)s+=times[i+1]-times[i];return Math.round(s*2)/2;}
 function showToast(t){const el=document.getElementById('toast');el.textContent=t||"OK";el.style.display='block';setTimeout(()=>el.style.display='none',1500);}
 
-/* ===== STOCKAGE local (fallback offline) ===== */
+/* ===== STOCKAGE local (fallback) ===== */
 const STORAGE_KEY="planning_secure_v1";
 function saveLocal(){const data={people,peopleData,current,currentYear,currentMonth};localStorage.setItem(STORAGE_KEY,JSON.stringify(data));}
 function loadLocal(){try{const s=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");if(!s)return false;people=s.people||people;Object.assign(peopleData,s.peopleData||{});current=s.current||current;currentYear=s.currentYear||currentYear;currentMonth=s.currentMonth||currentMonth;return true;}catch{return false;}}
@@ -329,19 +329,31 @@ function loadLocal(){try{const s=JSON.parse(localStorage.getItem(STORAGE_KEY)||"
 /* ===== CLOUD (Firebase) ===== */
 async function cloudSave() {
   const payload = { people, peopleData, current, currentYear, currentMonth, ts: Date.now() };
-  await db.ref(CLOUD_PATH).set(payload);
-  showToast("Sauvegardé en ligne ☁️✅");
+  try {
+    await db.ref(CLOUD_PATH).set(payload);
+    showToast("Sauvegardé en ligne ☁️✅");
+  } catch (err) {
+    console.error("cloudSave error:", err);
+    alert("Erreur sauvegarde cloud : " + (err?.message || err));
+    throw err;
+  }
 }
 async function cloudLoad() {
-  const snap = await db.ref(CLOUD_PATH).get();
-  if (!snap.exists()) return false;
-  const s = snap.val();
-  if (s.people) people = s.people;
-  if (s.peopleData) { for (const k in peopleData) delete peopleData[k]; Object.assign(peopleData, s.peopleData); }
-  current = s.current ?? current;
-  currentYear = s.currentYear ?? currentYear;
-  currentMonth = s.currentMonth ?? currentMonth;
-  return true;
+  try {
+    const snap = await db.ref(CLOUD_PATH).get();
+    if (!snap.exists()) return false;
+    const s = snap.val();
+    if (s.people) people = s.people;
+    if (s.peopleData) { for (const k in peopleData) delete peopleData[k]; Object.assign(peopleData, s.peopleData); }
+    current = s.current ?? current;
+    currentYear = s.currentYear ?? currentYear;
+    currentMonth = s.currentMonth ?? currentMonth;
+    return true;
+  } catch (err) {
+    console.error("cloudLoad error:", err);
+    alert("Erreur chargement cloud : " + (err?.message || err));
+    return false;
+  }
 }
 
 /* ===== SEED : Sabri août (exemple), autres vides ===== */
@@ -467,7 +479,7 @@ document.querySelectorAll('.chip[data-preset]').forEach(ch=>{ch.onclick=()=>{con
 document.getElementById('copyPrev').onclick=()=>{if(editDay==null)return;const prev=ensureMonth(current,currentYear,currentMonth).days[editDay-1];if(prev){fType.value=prev.type;fHours.value=prev.hours;fDetail.value=prev.detail||'';fNote.value=prev.note||'';}};
 document.getElementById('btnSave').onclick=async()=>{if(!editUnlocked)return alert("Édition admin requise.");if(editDay==null)return;
   ensureMonth(current,currentYear,currentMonth).days[editDay]={type:fType.value,hours:Number(fHours.value||0),detail:fDetail.value.trim(),note:fNote.value.trim()};
-  saveLocal(); try{await cloudSave();}catch{showToast("Sauvegarde locale (offline) ✅");}
+  saveLocal(); try{await cloudSave();}catch{}
   closeEditor();render();
 };
 document.getElementById('btnDel').onclick=async()=>{if(!editUnlocked)return alert("Édition admin requise.");if(editDay==null)return;
@@ -530,13 +542,19 @@ function openMenu(){if(!sideEl.classList.contains('drawer'))return;sideEl.classL
 function closeMenu(){sideEl.classList.remove('open');document.body.classList.remove('menu-open');overlayEl.style.display='none';}
 menuBtn.addEventListener('click',openMenu);overlayEl.addEventListener('click',closeMenu);window.addEventListener('resize',applyDrawerMode);applyDrawerMode();
 
-/* ===== Boot ===== */
+/* ===== BOOT (CLOUD FIRST) ===== */
 (async ()=>{
-  const hadLocal = loadLocal();
+  // 1) Cloud d'abord
   let loadedCloud = false;
   try { loadedCloud = await cloudLoad(); } catch { loadedCloud = false; }
-  if (!hadLocal && !loadedCloud) seedDefaultsIfEmpty();
 
+  // 2) Fallback local si cloud vide/erreur
+  if (!loadedCloud) {
+    const hadLocal = loadLocal();
+    if (!hadLocal) seedDefaultsIfEmpty();
+  }
+
+  // 3) Affichage accueil
   document.getElementById('now').textContent=new Date().toLocaleString('fr-FR');
   document.getElementById('home').style.display='flex';
   document.getElementById('app').style.display='none';
