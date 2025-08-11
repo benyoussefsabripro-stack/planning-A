@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Planning — Multi-personnes</title>
+<title>Planning — Sync + Sécurité</title>
 <style>
   :root{
     --bg:#f6f8ff; --text:#121625; --muted:#6b7280;
     --card:#ffffff; --border:#e5e7eb; --shadow:0 10px 30px rgba(15,23,42,.08);
     --c:#1e88ff; --p:#08a86b; --g:#ff8a2a; --r:#8b5cf6;
-    --brand:#2b5cff; --accent:#2b5cff;
+    --brand:#2b5cff; --accent:#2b5cff; --danger:#ef4444;
     --sidebar:#ffffff; --sidebar-border:#e5e7eb; --sidebar-hover:#eef2ff;
     --chip:#eef2ff; --chip-bd:#c7d2fe;
   }
@@ -31,6 +31,9 @@
   .toolbar{display:flex;gap:8px;flex-wrap:wrap}
   button{background:#fff;border:1px solid #d1d5db;border-radius:12px;padding:10px 12px;font-weight:800;cursor:pointer;box-shadow:var(--shadow)}
   button:hover{background:#f9fbff}
+  button.danger{border-color:#fecaca;background:#fff1f2;color:#b91c1c}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button[disabled]{opacity:.6;cursor:not-allowed}
   .wrap{max-width:1100px;margin:0 auto 40px;padding:0 18px}
   .legend{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0 16px}
   .tag{display:inline-flex;gap:8px;align-items:center;font-size:13px;color:#374151}
@@ -52,9 +55,9 @@
   .small{font-size:11px}
   /* toast */
   .toast{position:fixed;right:18px;bottom:18px;background:#111827;color:#fff;padding:10px 14px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.2);display:none;z-index:50}
-  /* Modals */
-  .modal-back{position:fixed;inset:0;background:rgba(2,6,23,.45);display:none;align-items:flex-end;justify-content:center;padding:14px;z-index:20}
-  .modal{background:#fff;max-width:560px;width:100%;border-radius:16px;padding:14px;border:1px solid #e5e7eb;box-shadow:0 22px 48px rgba(15,23,42,.22)}
+  /* Modal générique */
+  .modal-back{position:fixed;inset:0;background:rgba(2,6,23,.45);display:none;align-items:center;justify-content:center;padding:14px;z-index:30}
+  .modal{background:#fff;max-width:620px;width:100%;border-radius:16px;padding:14px;border:1px solid #e5e7eb;box-shadow:0 22px 48px rgba(15,23,42,.22)}
   .modal h2,.modal h3{margin:0 0 8px;font-size:16px}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   label{font-size:12px;color:#374151;font-weight:700}
@@ -63,34 +66,41 @@
   .chip{background:var(--chip);border:1px solid var(--chip-bd);border-radius:999px;padding:7px 10px;font-weight:800;cursor:pointer}
   .chip:hover{background:#e0e7ff}
   .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap}
-  .danger{border-color:#fecaca;background:#fff1f2}
-  /* People manager */
   .pm-list{display:flex;flex-direction:column;gap:8px;margin:10px 0}
   .pm-row{display:flex;gap:8px}
   .pm-row input{flex:1}
+  .lock{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
   /* Sélecteur de mois */
-  .mp-back{position:fixed;inset:0;background:rgba(2,6,23,.45);display:none;align-items:center;justify-content:center;padding:14px;z-index:30}
-  .mp{background:#fff;max-width:560px;width:100%;border-radius:16px;border:1px solid #e5e7eb;box-shadow:0 22px 48px rgba(15,23,42,.22);padding:14px}
-  .mp h3{margin:0 0 10px;font-size:16px}
   .mp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-  .mp button{width:100%}
-  @media (max-width:880px){ .app{grid-template-columns:1fr} .side{position:sticky;top:0;z-index:10} }
+  /* Mobile */
+  @media (max-width:880px){
+    .app{grid-template-columns:1fr}
+    .side{position:sticky;top:0;z-index:10}
+    button{padding:12px 14px}
+    .calendar{gap:8px}
+    .card{min-height:90px}
+  }
   /* Impression / PDF */
   @media print{
-    .side, header .toolbar, .modal-back, .mp-back, .small, .toast, #peopleModal{display:none}
+    .side, header .toolbar, .modal-back, .small, .toast, #peopleModal{display:none}
     .card{break-inside:avoid}
-    /* jours avec travail en gras */
     .card.work .date{font-weight:900}
     .card.work .pill{font-weight:900}
     body{background:white}
   }
 </style>
+
+<!-- Firebase (optionnel pour sync en ligne) -->
+<!-- Laisse ces 2 scripts, ça marchera quand tu mettras ton config plus bas -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
 <div class="app">
   <aside class="side">
     <div class="logo">🗓️ Planning</div>
     <div class="people" id="people"></div>
+    <div class="lock" id="lockInfo">🔒 Édition verrouillée</div>
     <div style="margin-top:14px;color:var(--muted);font-size:12px">Astuce : clique le <b>mois</b> pour changer.</div>
   </aside>
 
@@ -99,9 +109,12 @@
       <h1><span id="monthLabel">août 2025</span> — <span class="muted" id="who">Sabri</span></h1>
       <div class="toolbar">
         <button id="btnPdf">Exporter PDF</button>
-        <button id="btnEdit">Activer l’édition</button>
+        <button id="btnUnlock" class="primary">Déverrouiller (mot de passe)</button>
+        <button id="btnEdit" disabled>Activer l’édition</button>
+        <button id="btnPeople" disabled>Ajout & modification</button>
         <button id="btnSaveAll">Enregistrer les modifications</button>
-        <button id="btnPeople">Ajout & modification</button>
+        <button id="btnStats">Stats annuelles</button>
+        <button id="btnSync" title="Synchroniser via Firebase (optionnel)">Synchroniser</button>
         <button id="btnBackup">Exporter JSON</button>
         <button id="btnImport">Importer JSON</button>
         <input type="file" id="fileImport" accept="application/json" hidden>
@@ -120,11 +133,11 @@
       <div id="cal" class="calendar" aria-live="polite"></div>
       <p class="small">Dernière mise à jour : <span id="now"></span></p>
     </div>
-    <footer>Édition rapide : clique un jour → presets / semaine / plage → Enregistrer. Le bouton « Enregistrer les modifications » force la sauvegarde.</footer>
+    <footer>Jours travaillés en **gras** à l’impression. Mot de passe requis pour modifier : <b>securite</b>.</footer>
   </main>
 </div>
 
-<!-- MODAL ÉDITION -->
+<!-- MODAL ÉDITION JOUR -->
 <div class="modal-back" id="mb">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
     <h2 id="mTitle">Modifier</h2>
@@ -168,17 +181,17 @@
       <button id="btnRange">Appliquer sur une plage</button>
       <button id="btnDel" class="danger">Supprimer</button>
       <button id="btnClose">Fermer</button>
-      <button id="btnSave" style="background:var(--accent);color:#fff;border-color:var(--accent)">Enregistrer</button>
+      <button id="btnSave" class="primary">Enregistrer</button>
     </div>
   </div>
 </div>
 
 <!-- MODAL SÉLECTEUR DE MOIS -->
-<div class="mp-back" id="mpb">
-  <div class="mp" role="dialog" aria-modal="true">
+<div class="modal-back" id="mpb">
+  <div class="modal" role="dialog" aria-modal="true">
     <h3>Choisir un mois — <span id="curYear"></span></h3>
     <div class="mp-grid" id="monthGrid"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+    <div class="actions">
       <button id="mpClose">Fermer</button>
     </div>
   </div>
@@ -192,7 +205,18 @@
     <div class="actions">
       <button id="pmAdd">Ajouter un nom</button>
       <button id="pmCancel">Annuler</button>
-      <button id="pmSave" style="background:var(--accent);color:#fff;border-color:var(--accent)">Enregistrer</button>
+      <button id="pmSave" class="primary">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL STATS -->
+<div class="modal-back" id="statsModal">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3>Stats annuelles <span id="statsYear"></span></h3>
+    <div id="statsBody" style="max-height:60vh;overflow:auto"></div>
+    <div class="actions">
+      <button id="statsClose">Fermer</button>
     </div>
   </div>
 </div>
@@ -200,66 +224,112 @@
 <div class="toast" id="toast">Enregistré ✅</div>
 
 <script>
-/* ===== Clé de stockage ===== */
-const STORAGE_KEY = "planning_auto_v2";
+/* ====== CONFIG SYNC (Optionnel) ======
+   1) Crée un projet Firebase → Realtime Database (lecture/écriture publiques pour test).
+   2) Renseigne ci-dessous firebaseConfig avec tes clés.
+   3) Mets ENABLE_SYNC = true.
+   4) Clique le bouton "Synchroniser".
+*/
+const ENABLE_SYNC = false; // passe à true quand ton firebaseConfig est rempli
+const firebaseConfig = {
+  // apiKey: "xxx",
+  // authDomain: "xxx.firebaseapp.com",
+  // databaseURL: "https://xxx-default-rtdb.europe-west1.firebasedatabase.app",
+  // projectId: "xxx",
+  // storageBucket: "xxx.appspot.com",
+  // messagingSenderId: "xxx",
+  // appId: "xxx"
+};
+let appFB = null, dbFB = null;
+try{
+  if(ENABLE_SYNC && firebaseConfig && firebaseConfig.apiKey){
+    appFB = firebase.initializeApp(firebaseConfig);
+    dbFB = firebase.database();
+  }
+}catch(e){ console.warn("Firebase init error:", e); }
 
-/* ===== Etat global ===== */
+/* ====== SÉCURITÉ ====== */
+const EDIT_PASSWORD = "securite";
+let editUnlocked = false;
+
+/* ====== STOCKAGE LOCAL ====== */
+const STORAGE_KEY = "planning_sync_secure_v1";
+
+/* ====== ÉTAT GLOBAL ====== */
 const monthNames = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
 let currentYear = 2025;
-let currentMonth = 7; // 0=janvier
+let currentMonth = 7;
 let current = "Sabri";
 let editing = false;
 let editDay = null;
 
 let people = ["Momo","Lucas","Sabri","Sofiane","Hamid","Adam","Iddir","Karim"];
-const peopleData = {}; // structure: peopleData[name][year][month] = {days:{}}
+const peopleData = {}; // peopleData[name][year][month] = {days:{}}
 
-/* ===== Utils stockage ===== */
-function saveState() {
-  const data = { people, peopleData, currentYear, currentMonth, current };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  showToast("Enregistré ✅");
-}
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return false;
-    const s = JSON.parse(raw);
-    if (Array.isArray(s.people)) people = s.people;
-    if (s.peopleData && typeof s.peopleData === "object") {
-      for (const k in s.peopleData) peopleData[k] = s.peopleData[k];
-    }
-    if (typeof s.currentYear === "number") currentYear = s.currentYear;
-    if (typeof s.currentMonth === "number") currentMonth = s.currentMonth;
-    if (s.current) current = s.current;
-    return true;
-  } catch(e) { console.warn("Impossible de charger l'état:", e); return false; }
-}
-
-/* ===== Toast ===== */
-const toast = document.getElementById('toast');
-let toastTimer=null;
-function showToast(txt){
-  toast.textContent = txt || "Enregistré ✅";
-  toast.style.display='block';
-  clearTimeout(toastTimer);
-  toastTimer=setTimeout(()=>toast.style.display='none',1500);
-}
-
-/* ===== Helpers ===== */
 function ensureMonth(name, year, month){
   if(!peopleData[name]) peopleData[name]={};
   if(!peopleData[name][year]) peopleData[name][year] = {};
   if(!peopleData[name][year][month]) peopleData[name][year][month] = { days:{} };
   return peopleData[name][year][month];
 }
+
+/* ====== UTILS ====== */
 const colorOf = t => ({C:'var(--c)',P:'var(--p)',G:'var(--g)',R:'var(--r)'}[t]||'#999');
 function weekNumber(dt){ const t=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate())); const d=t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-d); const y0=new Date(Date.UTC(t.getUTCFullYear(),0,1)); return Math.ceil((((t-y0)/86400000)+1)/7); }
 function mondayOf(dt){ const d=(dt.getDay()+6)%7; const m=new Date(dt); m.setDate(dt.getDate()-d); return m; }
 function parseTimeToHours(t){ const m=t.match(/^(\d{1,2})h(?:(\d{2}))?$/i); if(!m) return null; const H=parseInt(m[1],10), M=parseInt(m[2]||"0",10); return H+(M/60); }
 function computeHoursFromDetail(detail){ const times=(detail.match(/\d{1,2}h\d{0,2}/g)||[]).map(parseTimeToHours).filter(v=>v!=null); let sum=0; for(let i=0;i+1<times.length;i+=2){ sum += (times[i+1]-times[i]); } return Math.round(sum*2)/2; }
+function showToast(txt){ const t=document.getElementById('toast'); t.textContent=txt||"OK"; t.style.display='block'; setTimeout(()=>t.style.display='none',1500); }
 
-/* ===== Données par défaut si aucune sauvegarde ===== */
+/* ====== SAUVEGARDE ====== */
+function saveState(silent=false){
+  const data = { people, peopleData, currentYear, currentMonth, current };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  if(!silent) showToast("Enregistré ✅");
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return false;
+    const s = JSON.parse(raw);
+    if(Array.isArray(s.people)) people = s.people;
+    if(s.peopleData) Object.assign(peopleData, s.peopleData);
+    if(typeof s.currentYear==="number") currentYear=s.currentYear;
+    if(typeof s.currentMonth==="number") currentMonth=s.currentMonth;
+    if(s.current) current=s.current;
+    return true;
+  }catch(e){ console.warn("loadState error", e); return false; }
+}
+
+/* ====== SYNC EN LIGNE (Firebase) ====== */
+function getShareKey(){
+  let k = localStorage.getItem("planning_share_key");
+  if(!k){ k = Math.random().toString(36).slice(2,10); localStorage.setItem("planning_share_key", k); }
+  return k;
+}
+async function syncSave(){
+  if(!dbFB){ alert("Sync non configurée. Renseigne firebaseConfig puis ENABLE_SYNC=true."); return; }
+  const key=getShareKey();
+  const payload = { people, peopleData, currentYear, currentMonth, current, ts: Date.now() };
+  await dbFB.ref("plannings/"+key).set(payload);
+  showToast("Synchronisé ✅ (clé: "+key+")");
+}
+async function syncLoad(){
+  if(!dbFB){ alert("Sync non configurée. Renseigne firebaseConfig puis ENABLE_SYNC=true."); return; }
+  const key = prompt("Clé de synchronisation à charger :", getShareKey());
+  if(!key) return;
+  const snap = await dbFB.ref("plannings/"+key).get();
+  if(!snap.exists()){ alert("Aucune donnée pour cette clé."); return; }
+  const s = snap.val();
+  if(s.people) people = s.people;
+  if(s.peopleData) { for(const k in peopleData) delete peopleData[k]; Object.assign(peopleData, s.peopleData); }
+  currentYear = s.currentYear ?? currentYear;
+  currentMonth = s.currentMonth ?? currentMonth;
+  current = s.current ?? current;
+  saveState(true); renderSidebar(); render(); showToast("Chargé depuis le cloud ☁️");
+}
+
+/* ====== DEFAULTS si nada ====== */
 function seedDefaultsIfEmpty(){
   if(!peopleData["Sabri"] || !peopleData["Sabri"][2025] || !peopleData["Sabri"][2025][7]){
     ensureMonth("Sabri", 2025, 7).days = {
@@ -281,7 +351,7 @@ function seedDefaultsIfEmpty(){
   }
 }
 
-/* ===== UI : sidebar ===== */
+/* ====== SIDEBAR ====== */
 const peopleEl = document.getElementById('people');
 function renderSidebar(){
   peopleEl.innerHTML='';
@@ -291,12 +361,13 @@ function renderSidebar(){
     el.className='person'+(name===current?' active':'');
     el.dataset.name=name;
     el.innerHTML=`<span class="badge" style="background:${colors[i%colors.length]}"></span>${name}`;
-    el.onclick=()=>{current=name;document.querySelectorAll('.person').forEach(p=>p.classList.remove('active'));el.classList.add('active'); saveState(); render();};
+    el.onclick=()=>{ current=name; document.querySelectorAll('.person').forEach(p=>p.classList.remove('active')); el.classList.add('active'); saveState(true); render(); };
     peopleEl.appendChild(el);
   });
+  document.getElementById('lockInfo').textContent = editUnlocked ? "✅ Édition déverrouillée" : "🔒 Édition verrouillée";
 }
 
-/* ===== Rendu calendrier ===== */
+/* ====== CALENDRIER ====== */
 function render(){
   document.getElementById('who').textContent = current;
   document.getElementById('monthLabel').textContent = `${monthNames[currentMonth]} ${currentYear}`;
@@ -323,12 +394,11 @@ function render(){
     } else if (editing){
       const plus=document.createElement('div'); plus.className='pill'; plus.style.background='#9aa5b1'; plus.textContent='+ Ajouter'; plus.style.color='#fff'; plus.style.marginTop='22px'; card.appendChild(plus);
     }
-    card.onclick=()=> editing && openEditor(day);
+    card.onclick=()=> (editing && editUnlocked) && openEditor(day);
     cal.appendChild(card);
   }
 
   const filled=offset+dim, rest=(7-(filled%7))%7; for(let i=0;i<rest;i++){const e=document.createElement('div');e.className='card empty';cal.appendChild(e);}
-
   renderTotals(days);
 }
 
@@ -342,7 +412,7 @@ function renderTotals(days){
   function box(t,val){const el=document.createElement('div'); el.className='box'; el.innerHTML=`<h3>${t}</h3><div>${val}</div>`; return el;}
 }
 
-/* ===== Editeur (jours) ===== */
+/* ====== MODAL JOUR ====== */
 const mb=document.getElementById('mb');
 const fType=document.getElementById('fType'), fHours=document.getElementById('fHours'), fDetail=document.getElementById('fDetail'), fNote=document.getElementById('fNote');
 
@@ -376,6 +446,7 @@ document.getElementById('copyPrev').onclick=()=>{
 };
 
 document.getElementById('btnSave').onclick=()=>{
+  if(!editUnlocked){ alert("Édition verrouillée. Clique 'Déverrouiller' et mets le mot de passe."); return; }
   if(editDay==null) return;
   ensureMonth(current,currentYear,currentMonth).days[editDay] = {
     type:fType.value, hours:Number(fHours.value||0), detail:fDetail.value.trim(), note:fNote.value.trim()
@@ -383,11 +454,13 @@ document.getElementById('btnSave').onclick=()=>{
   saveState(); closeEditor(); render();
 };
 document.getElementById('btnDel').onclick=()=>{
+  if(!editUnlocked){ alert("Édition verrouillée."); return; }
   if(editDay==null) return;
   delete ensureMonth(current,currentYear,currentMonth).days[editDay];
   saveState(); closeEditor(); render();
 };
 document.getElementById('btnWeek').onclick=()=>{
+  if(!editUnlocked){ alert("Édition verrouillée."); return; }
   if(editDay==null) return;
   const dt=new Date(currentYear,currentMonth,editDay);
   const mon=mondayOf(dt);
@@ -398,6 +471,7 @@ document.getElementById('btnWeek').onclick=()=>{
   saveState(); closeEditor(); render();
 };
 document.getElementById('btnRange').onclick=()=>{
+  if(!editUnlocked){ alert("Édition verrouillée."); return; }
   const ans=prompt("Appliquer du jour X au jour Y (ex: 5-12) :","");
   if(!ans) return;
   const m=ans.match(/^\s*(\d{1,2})\s*[-–]\s*(\d{1,2})\s*$/); if(!m) return alert("Format invalide. Exemple : 5-12");
@@ -410,14 +484,14 @@ document.getElementById('btnRange').onclick=()=>{
   saveState(); closeEditor(); render();
 };
 
-/* ===== Sélecteur de mois ===== */
+/* ====== SÉLECTEUR DE MOIS ====== */
 const mpb=document.getElementById('mpb'), monthGrid=document.getElementById('monthGrid'), curYearEl=document.getElementById('curYear');
 document.getElementById('monthLabel').onclick=()=>{
   curYearEl.textContent=currentYear;
   monthGrid.innerHTML='';
   monthNames.forEach((name,idx)=>{
     const b=document.createElement('button'); b.textContent=name[0].toUpperCase()+name.slice(1);
-    b.onclick=()=>{ currentMonth = idx; mpb.style.display='none'; saveState(); render(); };
+    b.onclick=()=>{ currentMonth = idx; mpb.style.display='none'; saveState(true); render(); };
     monthGrid.appendChild(b);
   });
   mpb.style.display='flex';
@@ -425,10 +499,11 @@ document.getElementById('monthLabel').onclick=()=>{
 document.getElementById('mpClose').onclick=()=> mpb.style.display='none';
 mpb.addEventListener('click',e=>{ if(e.target===mpb) mpb.style.display='none'; });
 
-/* ===== Gestion des noms ===== */
+/* ====== GESTION DES NOMS ====== */
 const pm = document.getElementById('peopleModal');
 const pmList = document.getElementById('pmList');
 document.getElementById('btnPeople').onclick=()=>{
+  if(!editUnlocked){ alert("Édition verrouillée."); return; }
   pmList.innerHTML='';
   people.forEach((name,i)=>{
     const row=document.createElement('div'); row.className='pm-row';
@@ -436,7 +511,6 @@ document.getElementById('btnPeople').onclick=()=>{
     const del=document.createElement('button'); del.textContent='Supprimer'; del.className='danger';
     del.onclick=()=>{
       if(!confirm(`Supprimer "${name}" ?`)) return;
-      // Si on supprime la personne courante, basculer sur la première restante
       if(current===name){ const next = people.find(n=>n!==name) || "Sabri"; current = next; }
       delete peopleData[name];
       people = people.filter(n=>n!==name);
@@ -457,41 +531,80 @@ document.getElementById('pmAdd').onclick=()=>{
 };
 document.getElementById('pmCancel').onclick=()=> pm.style.display='none';
 document.getElementById('pmSave').onclick=()=>{
-  // Récupère tous les inputs comme liste finale
   const inputs = pmList.querySelectorAll('input');
   const newList = [];
-  inputs.forEach(inp=>{
-    const v=inp.value.trim();
-    if(v && !newList.includes(v)) newList.push(v);
-  });
+  inputs.forEach(inp=>{ const v=inp.value.trim(); if(v && !newList.includes(v)) newList.push(v); });
   if(newList.length===0){ alert("Il faut au moins un nom."); return; }
-  // Conserver les données existantes, initialiser les nouvelles
   const newData = {};
   newList.forEach(n=>{ newData[n] = peopleData[n] || {}; });
-  // Si la personne courante n'existe plus, basculer sur la 1ère
   if(!newList.includes(current)) current=newList[0];
   people = newList;
-  // Remplacer peopleData par la nouvelle map
   for(const k in peopleData) delete peopleData[k];
   Object.assign(peopleData, newData);
   pm.style.display='none';
-  saveState();
-  renderSidebar();
-  render();
+  saveState(); renderSidebar(); render();
 };
 pm.addEventListener('click',e=>{ if(e.target===pm) pm.style.display='none'; });
 
-/* ===== Top bar ===== */
+/* ====== STATS ====== */
+const statsModal=document.getElementById('statsModal');
+document.getElementById('btnStats').onclick=()=>{
+  const y=currentYear;
+  document.getElementById('statsYear').textContent=y;
+  const body=document.getElementById('statsBody'); body.innerHTML='';
+  const table=document.createElement('table');
+  table.style.width='100%'; table.style.borderCollapse='collapse';
+  // header
+  const thead=document.createElement('thead'); const trh=document.createElement('tr');
+  ["Personne"].concat(monthNames.map(n=>n.slice(0,3))).concat(["Total"]).forEach(h=>{
+    const th=document.createElement('th'); th.textContent=h; th.style.border='1px solid #e5e7eb'; th.style.padding='8px'; th.style.background='#f3f4f6'; trh.appendChild(th);
+  });
+  thead.appendChild(trh); table.appendChild(thead);
+  // rows
+  const tbody=document.createElement('tbody');
+  people.forEach(p=>{
+    let totalYear=0;
+    const tr=document.createElement('tr');
+    const tdName=document.createElement('td'); tdName.textContent=p; tdName.style.border='1px solid #e5e7eb'; tdName.style.padding='8px'; tr.appendChild(tdName);
+    for(let m=0;m<12;m++){
+      let sum=0; const store=(peopleData[p]&&peopleData[p][y]&&peopleData[p][y][m])?peopleData[p][y][m].days:{};
+      Object.values(store).forEach(v=> sum+=Number(v.hours||0));
+      totalYear+=sum;
+      const td=document.createElement('td'); td.textContent=sum.toFixed(1).replace('.',','); td.style.border='1px solid #e5e7eb'; td.style.padding='8px'; tr.appendChild(td);
+    }
+    const tdT=document.createElement('td'); tdT.textContent=totalYear.toFixed(1).replace('.',','); tdT.style.border='1px solid #e5e7eb'; tdT.style.padding='8px'; tr.appendChild(tdT);
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody); body.appendChild(table);
+  statsModal.style.display='flex';
+};
+document.getElementById('statsClose').onclick=()=> statsModal.style.display='none';
+statsModal.addEventListener('click',e=>{ if(e.target===statsModal) statsModal.style.display='none'; });
+
+/* ====== TOP BAR ====== */
 document.getElementById('btnPdf').onclick=()=>window.print();
 document.getElementById('btnEdit').onclick=()=>{
+  if(!editUnlocked){ alert("Édition verrouillée. Clique 'Déverrouiller'."); return; }
   editing=!editing;
   document.getElementById('btnEdit').textContent=editing?'Quitter l’édition':'Activer l’édition';
   if(!editing) document.getElementById('mb').style.display='none';
   render();
 };
+document.getElementById('btnUnlock').onclick=()=>{
+  const pwd=prompt("Mot de passe d’édition :");
+  if(pwd===EDIT_PASSWORD){
+    editUnlocked=true;
+    document.getElementById('btnEdit').disabled=false;
+    document.getElementById('btnPeople').disabled=false;
+    document.getElementById('btnUnlock').textContent='Déverrouillé ✅';
+    renderSidebar();
+  }else{
+    alert("Mot de passe incorrect.");
+  }
+};
+document.getElementById('btnPeople').setAttribute('title','Réservé aux utilisateurs déverrouillés');
 document.getElementById('btnSaveAll').onclick=()=> saveState();
 
-// Export / Import JSON
 document.getElementById('btnBackup').onclick = () => {
   const blob = new Blob([localStorage.getItem(STORAGE_KEY) || "{}"], {type:"application/json"});
   const a = document.createElement('a');
@@ -511,9 +624,19 @@ document.getElementById('fileImport').onchange = async (e) => {
   showToast("Planning importé ✔️");
 };
 
-/* ===== Boot ===== */
-const loaded = loadState();     // charge si existant
-seedDefaultsIfEmpty();          // sinon valeurs par défaut utiles
+document.getElementById('btnSync').onclick=async ()=>{
+  if(!ENABLE_SYNC || !dbFB){ 
+    alert("Pour activer la synchronisation :\n1) Remplis firebaseConfig dans le code\n2) Mets ENABLE_SYNC = true\n3) Recharge la page puis re-clique");
+    return;
+  }
+  const mode = prompt("Tape 'save' pour envoyer au cloud, ou 'load' pour charger :", "save");
+  if(mode==="save"){ await syncSave(); }
+  else if(mode==="load"){ await syncLoad(); }
+};
+
+/* ====== BOOT ====== */
+const loaded = loadState();
+seedDefaultsIfEmpty();
 renderSidebar();
 document.getElementById('now').textContent=new Date().toLocaleString('fr-FR');
 render();
