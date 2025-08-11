@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Planning — Août 2025 (Sabri)</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#171a21; --muted:#8b8fa4;
+    --c:#4da3ff; --p:#2bc48a; --g:#ff9a3c; --r:#9b59b6;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:#eaeaf2;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  header{padding:16px 12px 6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  h1{margin:0;font-size:20px;font-weight:800}
+  .muted{color:#8b8fa4}
+  .wrap{max-width:980px;margin:0 auto 56px;padding:0 12px}
+  .toolbar{margin-left:auto;display:flex;gap:8px}
+  button{background:#232838;color:#fff;border:1px solid #2d3347;border-radius:12px;padding:10px 12px;font-weight:700;cursor:pointer}
+  .legend{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 14px}
+  .tag{display:inline-flex;gap:8px;align-items:center;font-size:13px;color:#cfd3e6}
+  .sw{width:14px;height:14px;border-radius:4px;display:inline-block}
+  .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+  .dow{font-size:12px;color:#8b8fa4;text-transform:uppercase;letter-spacing:.06em;text-align:center}
+  .card{background:#171a21;border:1px solid #242a3f;border-radius:14px;padding:10px;min-height:90px;position:relative}
+  .date{position:absolute;top:8px;left:10px;font-weight:700;font-size:13px;color:#c8cbe0}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:6px 10px;border-radius:999px;font-weight:800;margin-top:22px;width:max-content}
+  .note{font-size:12px;color:#d9c9ff;margin-top:6px}
+  .empty{opacity:.35}
+  .totals{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:12px 0 8px}
+  .box{background:#1c2132;border:1px solid #242a3f;border-radius:12px;padding:10px 12px}
+  .box h3{margin:0 0 4px;font-size:11px;color:#9aa0b8;text-transform:uppercase;letter-spacing:.08em}
+  .box div{font-size:18px;font-weight:900}
+  .small{font-size:11px;color:#a9acc4}
+  @media (min-width:900px){.totals{grid-template-columns:repeat(5,auto)}.card{min-height:110px}}
+  @media print{header,.toolbar,.small{display:none}.card{break-inside:avoid;border:1px solid #ccc}.legend{margin:0 0 8px 0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Planning — <span class="muted">août 2025</span></h1>
+    <div class="toolbar">
+      <button id="btnPdf">Exporter en PDF</button>
+      <button id="btnEdit">Activer l’édition</button>
+    </div>
+    <div class="legend">
+      <span class="tag"><span class="sw" style="background:var(--c)"></span> C</span>
+      <span class="tag"><span class="sw" style="background:var(--p)"></span> P</span>
+      <span class="tag"><span class="sw" style="background:var(--g)"></span> G</span>
+      <span class="tag"><span class="sw" style="background:var(--r)"></span> Fin spéciale / Ronde</span>
+    </div>
+  </header>
+
+  <div class="totals">
+    <div class="box"><h3>Total mois</h3><div id="sumMonth">— h</div></div>
+    <div class="box"><h3>Sem. 32</h3><div id="w32">— h</div></div>
+    <div class="box"><h3>Sem. 33</h3><div id="w33">— h</div></div>
+    <div class="box"><h3>Sem. 34</h3><div id="w34">— h</div></div>
+    <div class="box"><h3>Sem. 35</h3><div id="w35">— h</div></div>
+  </div>
+
+  <div id="cal" class="calendar" aria-live="polite"></div>
+  <p class="small">Clique “Activer l’édition” pour modifier un jour. Impression ⇒ Export PDF.</p>
+  <p class="small">Dernière mise à jour : <span id="now"></span></p>
+</div>
+
+<script>
+const MONTH = 7;  // 0=janvier → août=7
+const YEAR  = 2025;
+
+// Planning d’août (recopié)
+const data = {
+  days: {
+    1:{type:'C', hours:11, detail:'7h–12 / 13h30–21h30'},
+    4:{type:'G', hours:8.5, detail:'7h30–12 / 13h30–21h'},
+    6:{type:'R', hours:3.5, detail:'Ronde', note:'Fin 21h'},
+    7:{type:'G', hours:8.5, detail:'7h30–12 / 13h30–21h'},
+    8:{type:'G', hours:8.5, detail:'7h30–12 / 13h30–21h'},
+    11:{type:'C', hours:11, detail:'7h–12 / 13h30–21h30', note:'Fin 19h'},
+    12:{type:'C', hours:11, detail:'7h–12 / 13h30–21h30'},
+    14:{type:'C', hours:11, detail:'7h–12 / 13h30–21h30', note:'Fin 19h'},
+    19:{type:'P', hours:13, detail:'7h–13h30 / 15h–21h30'},
+    20:{type:'C', hours:13, detail:'7h–12 / 13h30–21h30'},
+    22:{type:'C', hours:13, detail:'7h–12 / 13h30–21h30'},
+    26:{type:'C', hours:13, detail:'7h–12 / 13h30–21h30'},
+    27:{type:'P', hours:13, detail:'7h–13h30 / 15h–21h30'},
+    29:{type:'C', hours:13, detail:'7h–12 / 13h30–21h30'}
+  }
+};
+
+const colorOf = t => ({'C':'var(--c)','P':'var(--p)','G':'var(--g)','R':'var(--r)'}[t]||'#888');
+
+function render(){
+  const cal = document.getElementById('cal'); cal.innerHTML = '';
+  ['lun','mar','mer','jeu','ven','sam','dim'].forEach(d=>{
+    const el=document.createElement('div'); el.className='dow'; el.textContent=d; cal.appendChild(el);
+  });
+
+  const first = new Date(YEAR, MONTH, 1);
+  const offset = (first.getDay()+6)%7;
+  const daysInMonth = new Date(YEAR, MONTH+1, 0).getDate();
+
+  for(let i=0;i<offset;i++){ const e=document.createElement('div'); e.className='card empty'; cal.appendChild(e); }
+
+  for(let day=1; day<=daysInMonth; day++){
+    const card=document.createElement('div'); card.className='card';
+    const dd=document.createElement('div'); dd.className='date'; dd.textContent=String(day).padStart(2,'0'); card.appendChild(dd);
+    const info=data.days[day];
+    if(info){
+      const pill=document.createElement('button'); pill.type='button'; pill.className='pill';
+      pill.style.background=colorOf(info.type);
+      pill.innerHTML=`<span>${info.type}</span> <small>${String(info.hours).replace('.',',')} h</small>`;
+      pill.title=info.detail||''; pill.dataset.day=day; pill.addEventListener('click', onEditPill);
+      card.appendChild(pill);
+      if(info.note){ const n=document.createElement('div'); n.className='note'; n.textContent=info.note; card.appendChild(n); }
+    }
+    cal.appendChild(card);
+  }
+
+  const filled = offset + daysInMonth;
+  const rest = (7 - (filled % 7)) % 7;
+  for(let i=0;i<rest;i++){ const e=document.createElement('div'); e.className='card empty'; cal.appendChild(e); }
+
+  computeTotals();
+}
+
+function weekNumber(dt){
+  const t = new Date(Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate()));
+  const d = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate()+4-d);
+  const y0 = new Date(Date.UTC(t.getUTCFullYear(),0,1));
+  return Math.ceil((((t - y0)/86400000)+1)/7);
+}
+
+function computeTotals(){
+  const weeks={32:0,33:0,34:0,35:0}; let month=0;
+  Object.entries(data.days).forEach(([d,v])=>{
+    const w=weekNumber(new Date(YEAR, MONTH, Number(d)));
+    weeks[w]=(weeks[w]||0)+Number(v.hours); month+=Number(v.hours);
+  });
+  document.getElementById('sumMonth').textContent = month.toFixed(2).replace('.',',')+' h';
+  [32,33,34,35].forEach(k=>{
+    const el=document.getElementById('w'+k); if(el) el.textContent=(weeks[k]||0).toFixed(2).replace('.',',')+' h';
+  });
+}
+
+function onEditPill(e){
+  if(!editing) return;
+  const day=Number(e.currentTarget.dataset.day);
+  const cur=data.days[day]||{};
+  const type=prompt("Type (C, P, G, R):", cur.type||'C'); if(!type) return;
+  const hours=Number(String(prompt("Heures :", cur.hours??'')||'0').replace(',','.'));
+  const detail=prompt("Détail (ex: 7h–12 / 13h30–21h30):", cur.detail||'');
+  const note=prompt("Note (ex: Fin 19h) — optionnel:", cur.note||'');
+  data.days[day]={type, hours, detail, note}; render();
+}
+
+let editing=false;
+btnEdit.onclick=()=>{ editing=!editing; btnEdit.textContent=editing?"Quitter l’édition":"Activer l’édition";
+  alert(editing?"Mode édition activé : clique une pastille pour modifier la journée.":"Mode édition désactivé.");
+};
+btnPdf.onclick=()=>window.print();
+
+document.getElementById('now').textContent=new Date().toLocaleString('fr-FR');
+render();
+</script>
+</body>
+</html>
