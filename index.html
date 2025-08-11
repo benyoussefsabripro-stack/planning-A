@@ -74,20 +74,22 @@
 </head>
 <body>
 <div class="app">
-  <!-- SIDEBAR -->
   <aside class="side">
     <div class="logo">🗓️ Planning</div>
     <div class="people" id="people"></div>
     <div style="margin-top:14px;color:var(--muted);font-size:12px">Astuce : clique le <b>mois</b> pour changer.</div>
   </aside>
 
-  <!-- MAIN -->
   <main>
     <header>
       <h1><span id="monthLabel">août 2025</span> — <span class="muted" id="who">Sabri</span></h1>
       <div class="toolbar">
         <button id="btnPdf">Exporter PDF</button>
         <button id="btnEdit">Activer l’édition</button>
+        <!-- Sauvegarde / transfert -->
+        <button id="btnBackup">Exporter JSON</button>
+        <button id="btnImport">Importer JSON</button>
+        <input type="file" id="fileImport" accept="application/json" hidden>
       </div>
     </header>
 
@@ -168,7 +170,29 @@
 </div>
 
 <script>
-/* ===== Etat global ===== */
+/* ===== Etat / stockage ===== */
+const STORAGE_KEY = "planning_auto_v1";
+
+function saveState() {
+  const data = { peopleData, currentYear, currentMonth, current };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (s.peopleData) {
+      // copie profonde simple
+      for (const k in s.peopleData) peopleData[k] = s.peopleData[k];
+    }
+    if (typeof s.currentYear === "number") currentYear = s.currentYear;
+    if (typeof s.currentMonth === "number") currentMonth = s.currentMonth;
+    if (s.current) current = s.current;
+  } catch(e) { console.warn("Impossible de charger l'état:", e); }
+}
+
+/* ===== Données multi-personnes / multi-mois ===== */
 const monthNames = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
 let currentYear = 2025;
 let currentMonth = 7; // 0=janvier
@@ -176,7 +200,6 @@ let current = "Sabri";
 let editing = false;
 let editDay = null;
 
-/* ===== Données multi-personnes / multi-mois ===== */
 const people = ["Momo","Lucas","Sabri","Sofiane","Hamid","Adam","Iddir","Karim"];
 const peopleData = {};
 people.forEach(n=>peopleData[n]={});
@@ -186,23 +209,28 @@ function ensureMonth(name, year, month){
   return peopleData[name][year][month];
 }
 
-/* ==== SABRI — Août 2025 ==== */
-ensureMonth("Sabri", 2025, 7).days = {
-  1:{type:'C', hours:11, detail:'7h–12 / 13h30–21h30', note:'Fin 21h'},
-  4:{type:'G', hours:8.5, detail:'7h30–12 / 13h30–21h'},
-  6:{type:'R', hours:3.5, detail:'Ronde', note:'Fin 21h'},
-  7:{type:'G', hours:8.5, detail:'7h30–12 / 13h30–21h'},
-  8:{type:'G', hours:8.5, detail:'7h30–12 / 13h30–21h'},
-  11:{type:'C', hours:11, detail:'7h–12 / 13h30–21h30', note:'Fin 19h'},
-  12:{type:'C', hours:11, detail:'7h–12 / 13h30–21h30'},
-  14:{type:'C', hours:11, detail:'7h–12 / 13h30–21h30', note:'Fin 19h'},
-  19:{type:'P', hours:13, detail:'7h–13h30 / 15h–21h30'},
-  20:{type:'C', hours:13, detail:'7h–12 / 13h30–21h30'},
-  22:{type:'C', hours:13, detail:'7h–12 / 13h30–21h30'},
-  26:{type:'C', hours:13, detail:'7h–12 / 13h30–21h30'},
-  27:{type:'P', hours:13, detail:'7h–13h30 / 15h–21h30'},
-  29:{type:'C', hours:13, detail:'7h–12 / 13h30–21h30'}
-};
+/* ==== Valeurs par défaut (si pas déjà dans le localStorage) ==== */
+function setDefaultsIfEmpty(){
+  const hasSabriAug = !!(peopleData["Sabri"] && peopleData["Sabri"][2025] && peopleData["Sabri"][2025][7]);
+  if(!hasSabriAug){
+    ensureMonth("Sabri", 2025, 7).days = {
+      1:{type:'C', hours:11, detail:'7h–12 / 13h30–21h30', note:'Fin 21h'},
+      4:{type:'G', hours:8.5, detail:'7h30–12 / 13h30–21h'},
+      6:{type:'R', hours:3.5, detail:'Ronde', note:'Fin 21h'},
+      7:{type:'G', hours:8.5, detail:'7h30–12 / 13h30–21h'},
+      8:{type:'G', hours:8.5, detail:'7h30–12 / 13h30–21h'},
+      11:{type:'C', hours:11, detail:'7h–12 / 13h30–21h30', note:'Fin 19h'},
+      12:{type:'C', hours:11, detail:'7h–12 / 13h30–21h30'},
+      14:{type:'C', hours:11, detail:'7h–12 / 13h30–21h30', note:'Fin 19h'},
+      19:{type:'P', hours:13, detail:'7h–13h30 / 15h–21h30'},
+      20:{type:'C', hours:13, detail:'7h–12 / 13h30–21h30'},
+      22:{type:'C', hours:13, detail:'7h–12 / 13h30–21h30'},
+      26:{type:'C', hours:13, detail:'7h–12 / 13h30–21h30'},
+      27:{type:'P', hours:13, detail:'7h–13h30 / 15h–21h30'},
+      29:{type:'C', hours:13, detail:'7h–12 / 13h30–21h30'}
+    };
+  }
+}
 
 /* ===== Sidebar ===== */
 const peopleEl = document.getElementById('people');
@@ -212,7 +240,12 @@ people.forEach((name,i)=>{
   el.dataset.name=name;
   const dots=['#9bd0ff','#ffd28a','#8ec5ff','#c4f6c1','#ffb4b4','#d7c7ff','#ffe69b','#a0e9dd'];
   el.innerHTML=`<span class="badge" style="background:${dots[i%dots.length]}"></span>${name}`;
-  el.onclick=()=>{current=name;document.querySelectorAll('.person').forEach(p=>p.classList.remove('active'));el.classList.add('active');render();}
+  el.onclick=()=>{
+    current=name;
+    document.querySelectorAll('.person').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active');
+    saveState(); render();
+  };
   peopleEl.appendChild(el);
 });
 
@@ -220,22 +253,8 @@ people.forEach((name,i)=>{
 const colorOf = t => ({C:'var(--c)',P:'var(--p)',G:'var(--g)',R:'var(--r)'}[t]||'#999');
 function weekNumber(dt){ const t=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate())); const d=t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-d); const y0=new Date(Date.UTC(t.getUTCFullYear(),0,1)); return Math.ceil((((t-y0)/86400000)+1)/7); }
 function mondayOf(dt){ const d=(dt.getDay()+6)%7; const m=new Date(dt); m.setDate(dt.getDate()-d); return m; }
-
-/* === Parse “7h30” etc → heures décimales === */
-function parseTimeToHours(t){
-  const m = t.match(/^(\d{1,2})h(?:(\d{2}))?$/i);
-  if(!m) return null;
-  const H = parseInt(m[1],10), M = parseInt(m[2]||"0",10);
-  return H + (M/60);
-}
-/* Calcule la durée totale d’une chaîne style “7h/13h30 - 15h/21h30” */
-function computeHoursFromDetail(detail){
-  const times = (detail.match(/\d{1,2}h\d{0,2}/g) || []).map(parseTimeToHours).filter(v=>v!=null);
-  let sum = 0;
-  for(let i=0;i+1<times.length;i+=2){ sum += (times[i+1]-times[i]); }
-  // arrondi au 0.5 le plus proche
-  return Math.round(sum*2)/2;
-}
+function parseTimeToHours(t){ const m=t.match(/^(\d{1,2})h(?:(\d{2}))?$/i); if(!m) return null; const H=parseInt(m[1],10), M=parseInt(m[2]||"0",10); return H+(M/60); }
+function computeHoursFromDetail(detail){ const times=(detail.match(/\d{1,2}h\d{0,2}/g)||[]).map(parseTimeToHours).filter(v=>v!=null); let sum=0; for(let i=0;i+1<times.length;i+=2){ sum += (times[i+1]-times[i]); } return Math.round(sum*2)/2; }
 
 /* ===== Rendu ===== */
 function render(){
@@ -292,24 +311,6 @@ function openEditor(day){
 function closeEditor(){ mb.style.display='none'; editDay=null; }
 document.getElementById('btnClose').onclick=closeEditor;
 
-document.getElementById('btnSave').onclick=()=>{
-  if(editDay==null) return;
-  ensureMonth(current,currentYear,currentMonth).days[editDay] = {
-    type:fType.value,
-    hours:Number(fHours.value||0),
-    detail:fDetail.value.trim(),
-    note:fNote.value.trim()
-  };
-  closeEditor(); render();
-};
-document.getElementById('btnDel').onclick=()=>{
-  if(editDay==null) return;
-  delete ensureMonth(current,currentYear,currentMonth).days[editDay];
-  closeEditor(); render();
-};
-mb.addEventListener('click',e=>{ if(e.target===mb) closeEditor(); });
-
-// Presets + auto calcul des heures
 document.querySelectorAll('.chip[data-preset]').forEach(ch=>{
   ch.onclick=()=>{
     const p=JSON.parse(ch.dataset.preset);
@@ -329,7 +330,18 @@ document.getElementById('copyPrev').onclick=()=>{
   if(prev){ fType.value=prev.type; fHours.value=prev.hours; fDetail.value=prev.detail||''; fNote.value=prev.note||''; }
 };
 
-// Semaine & plage
+document.getElementById('btnSave').onclick=()=>{
+  if(editDay==null) return;
+  ensureMonth(current,currentYear,currentMonth).days[editDay] = {
+    type:fType.value, hours:Number(fHours.value||0), detail:fDetail.value.trim(), note:fNote.value.trim()
+  };
+  saveState(); closeEditor(); render();
+};
+document.getElementById('btnDel').onclick=()=>{
+  if(editDay==null) return;
+  delete ensureMonth(current,currentYear,currentMonth).days[editDay];
+  saveState(); closeEditor(); render();
+};
 document.getElementById('btnWeek').onclick=()=>{
   if(editDay==null) return;
   const dt=new Date(currentYear,currentMonth,editDay);
@@ -338,7 +350,7 @@ document.getElementById('btnWeek').onclick=()=>{
   const payload={type:fType.value,hours:Number(fHours.value||0),detail:fDetail.value.trim(),note:fNote.value.trim()};
   const store=ensureMonth(current,currentYear,currentMonth).days;
   for(let i=0;i<7;i++){ const d=mon.getDate()+i; if(d>=1&&d<=dim){ store[d]={...payload}; } }
-  closeEditor(); render();
+  saveState(); closeEditor(); render();
 };
 document.getElementById('btnRange').onclick=()=>{
   const ans=prompt("Appliquer du jour X au jour Y (ex: 5-12) :","");
@@ -350,7 +362,7 @@ document.getElementById('btnRange').onclick=()=>{
   const payload={type:fType.value,hours:Number(fHours.value||0),detail:fDetail.value.trim(),note:fNote.value.trim()};
   const store=ensureMonth(current,currentYear,currentMonth).days;
   for(let d=a; d<=b; d++){ store[d]={...payload}; }
-  closeEditor(); render();
+  saveState(); closeEditor(); render();
 };
 
 /* ===== Sélecteur de mois ===== */
@@ -360,7 +372,7 @@ document.getElementById('monthLabel').onclick=()=>{
   monthGrid.innerHTML='';
   monthNames.forEach((name,idx)=>{
     const b=document.createElement('button'); b.textContent=name[0].toUpperCase()+name.slice(1);
-    b.onclick=()=>{ currentMonth = idx; mpb.style.display='none'; render(); };
+    b.onclick=()=>{ currentMonth = idx; mpb.style.display='none'; saveState(); render(); };
     monthGrid.appendChild(b);
   });
   mpb.style.display='flex';
@@ -373,10 +385,32 @@ document.getElementById('btnPdf').onclick=()=>window.print();
 document.getElementById('btnEdit').onclick=()=>{
   editing=!editing;
   document.getElementById('btnEdit').textContent=editing?'Quitter l’édition':'Activer l’édition';
-  if(!editing) closeEditor(); render();
+  if(!editing) closeEditor();
+  render();
+};
+// Export / Import JSON
+document.getElementById('btnBackup').onclick = () => {
+  const blob = new Blob([localStorage.getItem(STORAGE_KEY) || "{}"], {type:"application/json"});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = "planning.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+document.getElementById('btnImport').onclick = () => document.getElementById('fileImport').click();
+document.getElementById('fileImport').onchange = async (e) => {
+  const file = e.target.files[0]; if(!file) return;
+  const text = await file.text();
+  localStorage.setItem(STORAGE_KEY, text);
+  loadState(); render();
+  alert("Planning importé ✔️");
 };
 
 /* ===== Boot ===== */
+const peopleElInit = document.getElementById('people'); // placeholder to avoid unused warnings
+setDefaultsIfEmpty();          // valeurs par défaut
+loadState();                   // puis on tente de charger ce qui existe
+setDefaultsIfEmpty();          // si rien en storage, on remet par défaut
 document.getElementById('now').textContent=new Date().toLocaleString('fr-FR');
 render();
 </script>
