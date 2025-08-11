@@ -16,7 +16,6 @@
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
   .app{display:grid;grid-template-columns:270px 1fr;min-height:100vh}
-  /* Sidebar */
   .side{background:var(--sidebar);border-right:1px solid var(--sidebar-border);padding:16px 12px}
   .logo{font-weight:900;font-size:18px;letter-spacing:.2px;color:var(--brand);margin-bottom:12px}
   .people{display:flex;flex-direction:column;gap:6px}
@@ -24,7 +23,6 @@
   .person:hover{background:var(--sidebar-hover)}
   .person.active{background:#e6ecff;outline:2px solid #c9d2ff}
   .badge{width:10px;height:10px;border-radius:50%}
-  /* Main */
   header{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:18px 18px 6px}
   h1{margin:0;font-size:22px}
   #monthLabel{cursor:pointer;border-bottom:2px dashed transparent}
@@ -114,11 +112,13 @@
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
     <h2 id="mTitle">Modifier</h2>
     <div class="chips">
-      <span class="chip" data-preset='{"type":"C","hours":11,"detail":"7h–12 / 13h30–21h30"}'>C 11h</span>
-      <span class="chip" data-preset='{"type":"C","hours":13,"detail":"7h–12 / 13h30–21h30"}'>C 13h</span>
-      <span class="chip" data-preset='{"type":"G","hours":8.5,"detail":"7h30–12 / 13h30–21h"}'>G 8,5h</span>
-      <span class="chip" data-preset='{"type":"P","hours":13,"detail":"7h–13h30 / 15h–21h30"}'>P 13h</span>
-      <span class="chip" data-preset='{"type":"R","hours":2,"detail":"Ronde","note":"Fin 19h"}'>R 2h</span>
+      <span class="chip" data-preset='{"type":"P","detail":"Promenade 7h/13h30 - 15h/21h30","autoHours":true}'>Promenade 7h/13h30 - 15h/21h30</span>
+      <span class="chip" data-preset='{"type":"P","detail":"Promenade 9h/15h - 16h30/21h30","autoHours":true}'>Promenade 9h/15h - 16h30/21h30</span>
+      <span class="chip" data-preset='{"type":"C","detail":"Colline 7h/12h - 13h30/21h30","autoHours":true}'>Colline 7h/12h - 13h30/21h30</span>
+      <span class="chip" data-preset='{"type":"C","detail":"Colline 9h/13h30 - 15h/21h30","autoHours":true}'>Colline 9h/13h30 - 15h/21h30</span>
+      <span class="chip" data-preset='{"type":"C","detail":"Colline 7h30/12h - 13h/19h30","autoHours":true}'>Colline 7h30/12h - 13h/19h30</span>
+      <span class="chip" data-preset='{"type":"C","detail":"Colline 7h30/13h - 14h/21h30","autoHours":true}'>Colline 7h30/13h - 14h/21h30</span>
+      <span class="chip" data-preset='{"type":"G","detail":"Grande Arche 7h30/12h - 13h30/21h","autoHours":true}'>Grande Arche 7h30/12h - 13h30/21h</span>
       <span class="chip" id="copyPrev">Copier la veille</span>
     </div>
     <div class="row">
@@ -176,20 +176,17 @@ let current = "Sabri";
 let editing = false;
 let editDay = null;
 
-/* ===== Données multi-personnes / multi-mois =====
-   peopleData[person][year][month] = { days:{ 1:{type,hours,detail,note}, ... } }
-*/
+/* ===== Données multi-personnes / multi-mois ===== */
 const people = ["Momo","Lucas","Sabri","Sofiane","Hamid","Adam","Iddir","Karim"];
 const peopleData = {};
 people.forEach(n=>peopleData[n]={});
-
 function ensureMonth(name, year, month){
   if(!peopleData[name][year]) peopleData[name][year] = {};
   if(!peopleData[name][year][month]) peopleData[name][year][month] = { days:{} };
   return peopleData[name][year][month];
 }
 
-/* ==== SABRI — Août 2025 (les autres vides) ==== */
+/* ==== SABRI — Août 2025 ==== */
 ensureMonth("Sabri", 2025, 7).days = {
   1:{type:'C', hours:11, detail:'7h–12 / 13h30–21h30', note:'Fin 21h'},
   4:{type:'G', hours:8.5, detail:'7h30–12 / 13h30–21h'},
@@ -224,6 +221,22 @@ const colorOf = t => ({C:'var(--c)',P:'var(--p)',G:'var(--g)',R:'var(--r)'}[t]||
 function weekNumber(dt){ const t=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate())); const d=t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-d); const y0=new Date(Date.UTC(t.getUTCFullYear(),0,1)); return Math.ceil((((t-y0)/86400000)+1)/7); }
 function mondayOf(dt){ const d=(dt.getDay()+6)%7; const m=new Date(dt); m.setDate(dt.getDate()-d); return m; }
 
+/* === Parse “7h30” etc → heures décimales === */
+function parseTimeToHours(t){
+  const m = t.match(/^(\d{1,2})h(?:(\d{2}))?$/i);
+  if(!m) return null;
+  const H = parseInt(m[1],10), M = parseInt(m[2]||"0",10);
+  return H + (M/60);
+}
+/* Calcule la durée totale d’une chaîne style “7h/13h30 - 15h/21h30” */
+function computeHoursFromDetail(detail){
+  const times = (detail.match(/\d{1,2}h\d{0,2}/g) || []).map(parseTimeToHours).filter(v=>v!=null);
+  let sum = 0;
+  for(let i=0;i+1<times.length;i+=2){ sum += (times[i+1]-times[i]); }
+  // arrondi au 0.5 le plus proche
+  return Math.round(sum*2)/2;
+}
+
 /* ===== Rendu ===== */
 function render(){
   document.getElementById('who').textContent = current;
@@ -232,9 +245,7 @@ function render(){
   const store = ensureMonth(current, currentYear, currentMonth);
   const days = store.days;
   const cal=document.getElementById('cal'); cal.innerHTML='';
-  // Entêtes
   ['lun','mar','mer','jeu','ven','sam','dim'].forEach(d=>{const el=document.createElement('div');el.className='dow';el.textContent=d;cal.appendChild(el);});
-  // Cases
   const first=new Date(currentYear,currentMonth,1), offset=(first.getDay()+6)%7, dim=new Date(currentYear,currentMonth+1,0).getDate();
   for(let i=0;i<offset;i++){ const e=document.createElement('div'); e.className='card empty'; cal.appendChild(e); }
   for(let day=1; day<=dim; day++){
@@ -254,7 +265,6 @@ function render(){
     cal.appendChild(card);
   }
   const filled=offset+dim, rest=(7-(filled%7))%7; for(let i=0;i<rest;i++){const e=document.createElement('div');e.className='card empty';cal.appendChild(e);}
-
   renderTotals(days);
 }
 
@@ -285,7 +295,10 @@ document.getElementById('btnClose').onclick=closeEditor;
 document.getElementById('btnSave').onclick=()=>{
   if(editDay==null) return;
   ensureMonth(current,currentYear,currentMonth).days[editDay] = {
-    type:fType.value, hours:Number(fHours.value||0), detail:fDetail.value.trim(), note:fNote.value.trim()
+    type:fType.value,
+    hours:Number(fHours.value||0),
+    detail:fDetail.value.trim(),
+    note:fNote.value.trim()
   };
   closeEditor(); render();
 };
@@ -296,9 +309,19 @@ document.getElementById('btnDel').onclick=()=>{
 };
 mb.addEventListener('click',e=>{ if(e.target===mb) closeEditor(); });
 
-// Presets + copier veille
+// Presets + auto calcul des heures
 document.querySelectorAll('.chip[data-preset]').forEach(ch=>{
-  ch.onclick=()=>{const p=JSON.parse(ch.dataset.preset); fType.value=p.type; fHours.value=p.hours; fDetail.value=p.detail||''; fNote.value=p.note||'';};
+  ch.onclick=()=>{
+    const p=JSON.parse(ch.dataset.preset);
+    fType.value = p.type || 'C';
+    fDetail.value = p.detail || '';
+    if(p.autoHours && p.detail){
+      const h = computeHoursFromDetail(p.detail);
+      fHours.value = (isFinite(h)? h : 0);
+    }else{
+      fHours.value = p.hours ?? '';
+    }
+  };
 });
 document.getElementById('copyPrev').onclick=()=>{
   if(editDay==null) return;
@@ -307,7 +330,6 @@ document.getElementById('copyPrev').onclick=()=>{
 };
 
 // Semaine & plage
-function mondayOf(dt){ const d=(dt.getDay()+6)%7; const m=new Date(dt); m.setDate(dt.getDate()-d); return m; }
 document.getElementById('btnWeek').onclick=()=>{
   if(editDay==null) return;
   const dt=new Date(currentYear,currentMonth,editDay);
