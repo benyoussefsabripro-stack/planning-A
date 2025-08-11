@@ -50,10 +50,12 @@
   .empty{opacity:.35}
   footer{color:var(--muted);text-align:center;padding:18px}
   .small{font-size:11px}
-  /* Modal édition */
+  /* toast */
+  .toast{position:fixed;right:18px;bottom:18px;background:#111827;color:#fff;padding:10px 14px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.2);display:none;z-index:50}
+  /* Modals */
   .modal-back{position:fixed;inset:0;background:rgba(2,6,23,.45);display:none;align-items:flex-end;justify-content:center;padding:14px;z-index:20}
-  .modal{background:#fff;max-width:520px;width:100%;border-radius:16px;padding:14px;border:1px solid #e5e7eb;box-shadow:0 22px 48px rgba(15,23,42,.22)}
-  .modal h2{margin:0 0 8px;font-size:16px}
+  .modal{background:#fff;max-width:560px;width:100%;border-radius:16px;padding:14px;border:1px solid #e5e7eb;box-shadow:0 22px 48px rgba(15,23,42,.22)}
+  .modal h2,.modal h3{margin:0 0 8px;font-size:16px}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   label{font-size:12px;color:#374151;font-weight:700}
   input,select{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;font-size:14px}
@@ -62,6 +64,10 @@
   .chip:hover{background:#e0e7ff}
   .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap}
   .danger{border-color:#fecaca;background:#fff1f2}
+  /* People manager */
+  .pm-list{display:flex;flex-direction:column;gap:8px;margin:10px 0}
+  .pm-row{display:flex;gap:8px}
+  .pm-row input{flex:1}
   /* Sélecteur de mois */
   .mp-back{position:fixed;inset:0;background:rgba(2,6,23,.45);display:none;align-items:center;justify-content:center;padding:14px;z-index:30}
   .mp{background:#fff;max-width:560px;width:100%;border-radius:16px;border:1px solid #e5e7eb;box-shadow:0 22px 48px rgba(15,23,42,.22);padding:14px}
@@ -69,7 +75,15 @@
   .mp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
   .mp button{width:100%}
   @media (max-width:880px){ .app{grid-template-columns:1fr} .side{position:sticky;top:0;z-index:10} }
-  @media print{ .side, header .toolbar, .modal-back, .mp-back, .small{display:none} .card{break-inside:avoid} body{background:white} }
+  /* Impression / PDF */
+  @media print{
+    .side, header .toolbar, .modal-back, .mp-back, .small, .toast, #peopleModal{display:none}
+    .card{break-inside:avoid}
+    /* jours avec travail en gras */
+    .card.work .date{font-weight:900}
+    .card.work .pill{font-weight:900}
+    body{background:white}
+  }
 </style>
 </head>
 <body>
@@ -86,7 +100,8 @@
       <div class="toolbar">
         <button id="btnPdf">Exporter PDF</button>
         <button id="btnEdit">Activer l’édition</button>
-        <!-- Sauvegarde / transfert -->
+        <button id="btnSaveAll">Enregistrer les modifications</button>
+        <button id="btnPeople">Ajout & modification</button>
         <button id="btnBackup">Exporter JSON</button>
         <button id="btnImport">Importer JSON</button>
         <input type="file" id="fileImport" accept="application/json" hidden>
@@ -105,7 +120,7 @@
       <div id="cal" class="calendar" aria-live="polite"></div>
       <p class="small">Dernière mise à jour : <span id="now"></span></p>
     </div>
-    <footer>Édition rapide : clique un jour → presets / semaine / plage → Enregistrer.</footer>
+    <footer>Édition rapide : clique un jour → presets / semaine / plage → Enregistrer. Le bouton « Enregistrer les modifications » force la sauvegarde.</footer>
   </main>
 </div>
 
@@ -169,30 +184,26 @@
   </div>
 </div>
 
+<!-- MODAL GESTION DES NOMS -->
+<div class="modal-back" id="peopleModal">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3>Ajout & modification des noms</h3>
+    <div id="pmList" class="pm-list"></div>
+    <div class="actions">
+      <button id="pmAdd">Ajouter un nom</button>
+      <button id="pmCancel">Annuler</button>
+      <button id="pmSave" style="background:var(--accent);color:#fff;border-color:var(--accent)">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Enregistré ✅</div>
+
 <script>
-/* ===== Etat / stockage ===== */
-const STORAGE_KEY = "planning_auto_v1";
+/* ===== Clé de stockage ===== */
+const STORAGE_KEY = "planning_auto_v2";
 
-function saveState() {
-  const data = { peopleData, currentYear, currentMonth, current };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    const s = JSON.parse(raw);
-    if (s.peopleData) {
-      // copie profonde simple
-      for (const k in s.peopleData) peopleData[k] = s.peopleData[k];
-    }
-    if (typeof s.currentYear === "number") currentYear = s.currentYear;
-    if (typeof s.currentMonth === "number") currentMonth = s.currentMonth;
-    if (s.current) current = s.current;
-  } catch(e) { console.warn("Impossible de charger l'état:", e); }
-}
-
-/* ===== Données multi-personnes / multi-mois ===== */
+/* ===== Etat global ===== */
 const monthNames = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
 let currentYear = 2025;
 let currentMonth = 7; // 0=janvier
@@ -200,19 +211,57 @@ let current = "Sabri";
 let editing = false;
 let editDay = null;
 
-const people = ["Momo","Lucas","Sabri","Sofiane","Hamid","Adam","Iddir","Karim"];
-const peopleData = {};
-people.forEach(n=>peopleData[n]={});
+let people = ["Momo","Lucas","Sabri","Sofiane","Hamid","Adam","Iddir","Karim"];
+const peopleData = {}; // structure: peopleData[name][year][month] = {days:{}}
+
+/* ===== Utils stockage ===== */
+function saveState() {
+  const data = { people, peopleData, currentYear, currentMonth, current };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  showToast("Enregistré ✅");
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    if (Array.isArray(s.people)) people = s.people;
+    if (s.peopleData && typeof s.peopleData === "object") {
+      for (const k in s.peopleData) peopleData[k] = s.peopleData[k];
+    }
+    if (typeof s.currentYear === "number") currentYear = s.currentYear;
+    if (typeof s.currentMonth === "number") currentMonth = s.currentMonth;
+    if (s.current) current = s.current;
+    return true;
+  } catch(e) { console.warn("Impossible de charger l'état:", e); return false; }
+}
+
+/* ===== Toast ===== */
+const toast = document.getElementById('toast');
+let toastTimer=null;
+function showToast(txt){
+  toast.textContent = txt || "Enregistré ✅";
+  toast.style.display='block';
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>toast.style.display='none',1500);
+}
+
+/* ===== Helpers ===== */
 function ensureMonth(name, year, month){
+  if(!peopleData[name]) peopleData[name]={};
   if(!peopleData[name][year]) peopleData[name][year] = {};
   if(!peopleData[name][year][month]) peopleData[name][year][month] = { days:{} };
   return peopleData[name][year][month];
 }
+const colorOf = t => ({C:'var(--c)',P:'var(--p)',G:'var(--g)',R:'var(--r)'}[t]||'#999');
+function weekNumber(dt){ const t=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate())); const d=t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-d); const y0=new Date(Date.UTC(t.getUTCFullYear(),0,1)); return Math.ceil((((t-y0)/86400000)+1)/7); }
+function mondayOf(dt){ const d=(dt.getDay()+6)%7; const m=new Date(dt); m.setDate(dt.getDate()-d); return m; }
+function parseTimeToHours(t){ const m=t.match(/^(\d{1,2})h(?:(\d{2}))?$/i); if(!m) return null; const H=parseInt(m[1],10), M=parseInt(m[2]||"0",10); return H+(M/60); }
+function computeHoursFromDetail(detail){ const times=(detail.match(/\d{1,2}h\d{0,2}/g)||[]).map(parseTimeToHours).filter(v=>v!=null); let sum=0; for(let i=0;i+1<times.length;i+=2){ sum += (times[i+1]-times[i]); } return Math.round(sum*2)/2; }
 
-/* ==== Valeurs par défaut (si pas déjà dans le localStorage) ==== */
-function setDefaultsIfEmpty(){
-  const hasSabriAug = !!(peopleData["Sabri"] && peopleData["Sabri"][2025] && peopleData["Sabri"][2025][7]);
-  if(!hasSabriAug){
+/* ===== Données par défaut si aucune sauvegarde ===== */
+function seedDefaultsIfEmpty(){
+  if(!peopleData["Sabri"] || !peopleData["Sabri"][2025] || !peopleData["Sabri"][2025][7]){
     ensureMonth("Sabri", 2025, 7).days = {
       1:{type:'C', hours:11, detail:'7h–12 / 13h30–21h30', note:'Fin 21h'},
       4:{type:'G', hours:8.5, detail:'7h30–12 / 13h30–21h'},
@@ -232,31 +281,22 @@ function setDefaultsIfEmpty(){
   }
 }
 
-/* ===== Sidebar ===== */
+/* ===== UI : sidebar ===== */
 const peopleEl = document.getElementById('people');
-people.forEach((name,i)=>{
-  const el=document.createElement('div');
-  el.className='person'+(name===current?' active':'');
-  el.dataset.name=name;
-  const dots=['#9bd0ff','#ffd28a','#8ec5ff','#c4f6c1','#ffb4b4','#d7c7ff','#ffe69b','#a0e9dd'];
-  el.innerHTML=`<span class="badge" style="background:${dots[i%dots.length]}"></span>${name}`;
-  el.onclick=()=>{
-    current=name;
-    document.querySelectorAll('.person').forEach(p=>p.classList.remove('active'));
-    el.classList.add('active');
-    saveState(); render();
-  };
-  peopleEl.appendChild(el);
-});
+function renderSidebar(){
+  peopleEl.innerHTML='';
+  const colors=['#9bd0ff','#ffd28a','#8ec5ff','#c4f6c1','#ffb4b4','#d7c7ff','#ffe69b','#a0e9dd'];
+  people.forEach((name,i)=>{
+    const el=document.createElement('div');
+    el.className='person'+(name===current?' active':'');
+    el.dataset.name=name;
+    el.innerHTML=`<span class="badge" style="background:${colors[i%colors.length]}"></span>${name}`;
+    el.onclick=()=>{current=name;document.querySelectorAll('.person').forEach(p=>p.classList.remove('active'));el.classList.add('active'); saveState(); render();};
+    peopleEl.appendChild(el);
+  });
+}
 
-/* ===== Helpers ===== */
-const colorOf = t => ({C:'var(--c)',P:'var(--p)',G:'var(--g)',R:'var(--r)'}[t]||'#999');
-function weekNumber(dt){ const t=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate())); const d=t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-d); const y0=new Date(Date.UTC(t.getUTCFullYear(),0,1)); return Math.ceil((((t-y0)/86400000)+1)/7); }
-function mondayOf(dt){ const d=(dt.getDay()+6)%7; const m=new Date(dt); m.setDate(dt.getDate()-d); return m; }
-function parseTimeToHours(t){ const m=t.match(/^(\d{1,2})h(?:(\d{2}))?$/i); if(!m) return null; const H=parseInt(m[1],10), M=parseInt(m[2]||"0",10); return H+(M/60); }
-function computeHoursFromDetail(detail){ const times=(detail.match(/\d{1,2}h\d{0,2}/g)||[]).map(parseTimeToHours).filter(v=>v!=null); let sum=0; for(let i=0;i+1<times.length;i+=2){ sum += (times[i+1]-times[i]); } return Math.round(sum*2)/2; }
-
-/* ===== Rendu ===== */
+/* ===== Rendu calendrier ===== */
 function render(){
   document.getElementById('who').textContent = current;
   document.getElementById('monthLabel').textContent = `${monthNames[currentMonth]} ${currentYear}`;
@@ -266,12 +306,15 @@ function render(){
   const cal=document.getElementById('cal'); cal.innerHTML='';
   ['lun','mar','mer','jeu','ven','sam','dim'].forEach(d=>{const el=document.createElement('div');el.className='dow';el.textContent=d;cal.appendChild(el);});
   const first=new Date(currentYear,currentMonth,1), offset=(first.getDay()+6)%7, dim=new Date(currentYear,currentMonth+1,0).getDate();
+
   for(let i=0;i<offset;i++){ const e=document.createElement('div'); e.className='card empty'; cal.appendChild(e); }
+
   for(let day=1; day<=dim; day++){
     const card=document.createElement('div'); card.className='card'; card.dataset.day=day;
     const dd=document.createElement('div'); dd.className='date'; dd.textContent=String(day).padStart(2,'0'); card.appendChild(dd);
     const info=days[day];
     if(info){
+      card.classList.add('work');
       const pill=document.createElement('div'); pill.className='pill'; pill.dataset.type=info.type;
       pill.style.background=colorOf(info.type);
       pill.innerHTML=`<span>${info.type}</span> <small>${String(info.hours).replace('.',',')} h</small>`;
@@ -283,7 +326,9 @@ function render(){
     card.onclick=()=> editing && openEditor(day);
     cal.appendChild(card);
   }
+
   const filled=offset+dim, rest=(7-(filled%7))%7; for(let i=0;i<rest;i++){const e=document.createElement('div');e.className='card empty';cal.appendChild(e);}
+
   renderTotals(days);
 }
 
@@ -297,7 +342,7 @@ function renderTotals(days){
   function box(t,val){const el=document.createElement('div'); el.className='box'; el.innerHTML=`<h3>${t}</h3><div>${val}</div>`; return el;}
 }
 
-/* ===== Editeur ===== */
+/* ===== Editeur (jours) ===== */
 const mb=document.getElementById('mb');
 const fType=document.getElementById('fType'), fHours=document.getElementById('fHours'), fDetail=document.getElementById('fDetail'), fNote=document.getElementById('fNote');
 
@@ -380,14 +425,72 @@ document.getElementById('monthLabel').onclick=()=>{
 document.getElementById('mpClose').onclick=()=> mpb.style.display='none';
 mpb.addEventListener('click',e=>{ if(e.target===mpb) mpb.style.display='none'; });
 
-/* ===== Top ===== */
+/* ===== Gestion des noms ===== */
+const pm = document.getElementById('peopleModal');
+const pmList = document.getElementById('pmList');
+document.getElementById('btnPeople').onclick=()=>{
+  pmList.innerHTML='';
+  people.forEach((name,i)=>{
+    const row=document.createElement('div'); row.className='pm-row';
+    const inp=document.createElement('input'); inp.value=name;
+    const del=document.createElement('button'); del.textContent='Supprimer'; del.className='danger';
+    del.onclick=()=>{
+      if(!confirm(`Supprimer "${name}" ?`)) return;
+      // Si on supprime la personne courante, basculer sur la première restante
+      if(current===name){ const next = people.find(n=>n!==name) || "Sabri"; current = next; }
+      delete peopleData[name];
+      people = people.filter(n=>n!==name);
+      row.remove();
+    };
+    row.appendChild(inp); row.appendChild(del);
+    pmList.appendChild(row);
+  });
+  pm.style.display='flex';
+};
+document.getElementById('pmAdd').onclick=()=>{
+  const row=document.createElement('div'); row.className='pm-row';
+  const inp=document.createElement('input'); inp.placeholder='Nouveau nom';
+  const del=document.createElement('button'); del.textContent='Supprimer'; del.className='danger';
+  del.onclick=()=>row.remove();
+  row.appendChild(inp); row.appendChild(del);
+  pmList.appendChild(row);
+};
+document.getElementById('pmCancel').onclick=()=> pm.style.display='none';
+document.getElementById('pmSave').onclick=()=>{
+  // Récupère tous les inputs comme liste finale
+  const inputs = pmList.querySelectorAll('input');
+  const newList = [];
+  inputs.forEach(inp=>{
+    const v=inp.value.trim();
+    if(v && !newList.includes(v)) newList.push(v);
+  });
+  if(newList.length===0){ alert("Il faut au moins un nom."); return; }
+  // Conserver les données existantes, initialiser les nouvelles
+  const newData = {};
+  newList.forEach(n=>{ newData[n] = peopleData[n] || {}; });
+  // Si la personne courante n'existe plus, basculer sur la 1ère
+  if(!newList.includes(current)) current=newList[0];
+  people = newList;
+  // Remplacer peopleData par la nouvelle map
+  for(const k in peopleData) delete peopleData[k];
+  Object.assign(peopleData, newData);
+  pm.style.display='none';
+  saveState();
+  renderSidebar();
+  render();
+};
+pm.addEventListener('click',e=>{ if(e.target===pm) pm.style.display='none'; });
+
+/* ===== Top bar ===== */
 document.getElementById('btnPdf').onclick=()=>window.print();
 document.getElementById('btnEdit').onclick=()=>{
   editing=!editing;
   document.getElementById('btnEdit').textContent=editing?'Quitter l’édition':'Activer l’édition';
-  if(!editing) closeEditor();
+  if(!editing) document.getElementById('mb').style.display='none';
   render();
 };
+document.getElementById('btnSaveAll').onclick=()=> saveState();
+
 // Export / Import JSON
 document.getElementById('btnBackup').onclick = () => {
   const blob = new Blob([localStorage.getItem(STORAGE_KEY) || "{}"], {type:"application/json"});
@@ -402,15 +505,16 @@ document.getElementById('fileImport').onchange = async (e) => {
   const file = e.target.files[0]; if(!file) return;
   const text = await file.text();
   localStorage.setItem(STORAGE_KEY, text);
-  loadState(); render();
-  alert("Planning importé ✔️");
+  loadState();
+  renderSidebar();
+  render();
+  showToast("Planning importé ✔️");
 };
 
 /* ===== Boot ===== */
-const peopleElInit = document.getElementById('people'); // placeholder to avoid unused warnings
-setDefaultsIfEmpty();          // valeurs par défaut
-loadState();                   // puis on tente de charger ce qui existe
-setDefaultsIfEmpty();          // si rien en storage, on remet par défaut
+const loaded = loadState();     // charge si existant
+seedDefaultsIfEmpty();          // sinon valeurs par défaut utiles
+renderSidebar();
 document.getElementById('now').textContent=new Date().toLocaleString('fr-FR');
 render();
 </script>
