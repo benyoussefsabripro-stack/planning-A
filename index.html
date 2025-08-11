@@ -244,128 +244,122 @@
       <span class="chip" data-preset='{"type":"C","detail":"Colline 7h30/12h - 13h/19h30","autoHours":true}'>Colline 7h30/12h - 13h/19h30</span>
       <span class="chip" data-preset='{"type":"C","detail":"Colline 7h30/13h - 14h/21h30","autoHours":true}'>Colline 7h30/13h - 14h/21h30</span>
       <span class="chip" data-preset='{"type":"G","detail":"Grande Arche 7h30/12h - 13h30/21h","autoHours":true}'>Grande Arche 7h30/12h -  
-        <script>
-// ======= CONFIGURATION =======
-const adminPassword = "securite";
-const personPasswords = {
-  "Momo": "1",
-  "Lucas": "2",
-  "Sabri": "3",
-  "Sofiane": "4",
-  "Hamid": "5",
-  "Adam": "6",
-  "Iddir": "7",
-  "Karim": "8"
+     <script>
+/* ====== Sécurité ====== */
+const ADMIN_PASS = "securite";
+const PERSON_PASSES = { Momo:"1", Lucas:"2", Sabri:"3", Sofiane:"4", Hamid:"5", Adam:"6", Iddir:"7", Karim:"8" };
+
+/* ====== État ====== */
+let authRole=null, authUser=null, editUnlocked=false;
+let current="Sabri", currentYear=2025, currentMonth=7, editing=false;
+let people=["Momo","Lucas","Sabri","Sofiane","Hamid","Adam","Iddir","Karim"];
+const peopleData={}; // plannings (vides par défaut)
+const monthNames=["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+
+/* ====== Helpers stockage ====== */
+const STORAGE_KEY="planning_secure_v1";
+function ensureMonth(name,y,m){ if(!peopleData[name]) peopleData[name]={}; if(!peopleData[name][y]) peopleData[name][y]={}; if(!peopleData[name][y][m]) peopleData[name][y][m]={days:{}}; return peopleData[name][y][m]; }
+function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify({people,peopleData,current,currentYear,currentMonth})); }
+function loadState(){ try{const s=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null"); if(!s) return; people=s.people||people; Object.assign(peopleData,s.peopleData||{}); current=s.current||current; currentYear=s.currentYear||currentYear; currentMonth=s.currentMonth||currentMonth; }catch{} }
+
+/* ====== Accueil ====== */
+function renderHome(){
+  const grid=document.getElementById("homeGrid");
+  grid.innerHTML="";
+  ["Momo","Lucas","Sabri","Sofiane","Hamid","Adam","Iddir","Karim"].forEach(name=>{
+    const card=document.createElement("div");
+    card.className="person-card";
+    card.innerHTML=`
+      <div class="avatar"><span>${name[0]}</span></div>
+      <div class="pname">${name}</div>
+      <div class="pwd-hint">••••</div>`;
+    card.onclick=()=>requestAccess(name);
+    grid.appendChild(card);
+  });
+}
+function showHome(){
+  document.getElementById("home").style.display="flex";
+  document.getElementById("app").style.display="none";
+}
+
+/* ====== Auth ====== */
+function requestAccess(name){
+  const pwd=prompt(`Mot de passe pour ${name} (ou "securite" pour admin) :`);
+  if(!pwd) return;
+  if(pwd===ADMIN_PASS){ authRole="admin"; authUser=null; editUnlocked=true; enterApp(name); }
+  else if(PERSON_PASSES[name]===pwd){ authRole="user"; authUser=name; editUnlocked=false; enterApp(name); }
+  else alert("Mot de passe incorrect.");
+}
+document.getElementById("adminBtn")?.addEventListener("click",()=>{
+  const pwd=prompt("Mot de passe administrateur :");
+  if(pwd===ADMIN_PASS){ authRole="admin"; editUnlocked=true; enterApp("Sabri"); } else alert("Mot de passe incorrect.");
+});
+
+/* ====== Entrée dans l’app ====== */
+function enterApp(initialName){
+  current=initialName||current;
+  document.getElementById("home").style.display="none";
+  document.getElementById("app").style.display="grid";
+  renderSidebar(); render(); // dessine menu + calendrier
+}
+
+/* ====== Sidebar ====== */
+function renderSidebar(){
+  const peopleEl=document.getElementById("people");
+  peopleEl.innerHTML="";
+  const visible = (authRole==="admin") ? people : [authUser];
+  visible.forEach(name=>{
+    const el=document.createElement("div");
+    el.className="person"+(name===current?" active":"");
+    el.innerHTML=`<span class="badge" style="background:#9bd0ff"></span>${name}`;
+    el.onclick=()=>{current=name; renderSidebar(); render();};
+    peopleEl.appendChild(el);
+  });
+  document.getElementById("lockInfo").textContent = editUnlocked ? "✅ Admin (édition autorisée)" : "👁️ Lecture seule";
+}
+
+/* ====== Calendrier (affichage simple) ====== */
+function render(){
+  document.getElementById("who").textContent=current;
+  document.getElementById("monthLabel").textContent=`${monthNames[currentMonth]} ${currentYear}`;
+  const cal=document.getElementById("cal"); cal.innerHTML="";
+  ['lun','mar','mer','jeu','ven','sam','dim'].forEach(d=>{ const el=document.createElement('div'); el.className='dow'; el.textContent=d; cal.appendChild(el); });
+  const first=new Date(currentYear,currentMonth,1), offset=(first.getDay()+6)%7, dim=new Date(currentYear,currentMonth+1,0).getDate();
+  for(let i=0;i<offset;i++){ cal.appendChild(divCard(true)); }
+  const days=ensureMonth(current,currentYear,currentMonth).days;
+  for(let d=1; d<=dim; d++){ cal.appendChild(dayCard(d, days[d])); }
+  const filled=offset+dim, rest=(7-(filled%7))%7; for(let i=0;i<rest;i++) cal.appendChild(divCard(true));
+  document.getElementById('now').textContent=new Date().toLocaleString('fr-FR');
+}
+function divCard(empty){ const e=document.createElement('div'); e.className='card'+(empty?' empty':''); return e; }
+function dayCard(day,info){
+  const card=divCard(false);
+  const n=document.createElement('div'); n.className='date'; n.textContent=String(day).padStart(2,'0'); card.appendChild(n);
+  if(info){ const pill=document.createElement('div'); pill.className='pill'; pill.dataset.type=info.type||'C'; pill.style.background=({C:'var(--c)',P:'var(--p)',G:'var(--g)',R:'var(--r)'}[info.type]||'var(--c)'); pill.innerHTML=`<span>${info.type||'C'}</span> <small>${String(info.hours||0).replace('.',',')} h</small>`; card.appendChild(pill); if(info.note){ const nn=document.createElement('div'); nn.className='note'; nn.textContent=info.note; card.appendChild(nn);} card.classList.add('work'); }
+  // édition seulement pour admin
+  if(editUnlocked){ card.onclick=()=>{ const detail=prompt("Détail :", info?.detail||""); if(detail===null) return; const hoursStr=prompt("Heures (ex 11 ou 8.5) :", info?.hours||""); const hours=Number(hoursStr||0); const type=prompt("Type (C/P/G/R) :", info?.type||"C"); ensureMonth(current,currentYear,currentMonth).days[day]={type:(type||"C").toUpperCase(),hours,detail,note:""}; saveState(); render(); }; }
+  return card;
+}
+
+/* ====== Changement de mois ====== */
+document.getElementById("monthLabel").onclick=()=>{
+  const pick=prompt("Mois (1–12) et année (ex: 08/2025) :", `${String(currentMonth+1).padStart(2,'0')}/${currentYear}`);
+  if(!pick) return;
+  const m=pick.match(/^\s*(\d{1,2})\s*\/\s*(\d{4})\s*$/);
+  if(!m) return alert("Format invalide. Exemple : 08/2025");
+  currentMonth=Math.min(11,Math.max(0,parseInt(m[1],10)-1));
+  currentYear=parseInt(m[2],10)||currentYear;
+  render();
 };
 
-// ======= DONNÉES INITIALES =======
-const peopleData = {
-  "Momo": { days: {} },
-  "Lucas": { days: {} },
-  "Sabri": { days: {} }, // à remplir
-  "Sofiane": { days: {} },
-  "Hamid": { days: {} },
-  "Adam": { days: {} },
-  "Iddir": { days: {} },
-  "Karim": { days: {} }
-};
+/* ====== Boutons header ====== */
+document.getElementById('btnHome').onclick=()=>{ authRole=null; authUser=null; editUnlocked=false; showHome(); };
+document.getElementById('btnLogout').onclick=()=>{ authRole=null; authUser=null; editUnlocked=false; showHome(); };
+document.getElementById('btnPdf').onclick=()=>window.print();
+document.getElementById('btnSaveAll').onclick=()=>saveState();
 
-let currentPerson = null;
-let currentMonth = new Date().getMonth();
-let currentYear = new Date().getFullYear();
-let isAdmin = false;
-
-// ======= ÉCRAN ACCUEIL =======
-function showHome() {
-  document.getElementById("homeScreen").style.display = "flex";
-  document.getElementById("planningScreen").style.display = "none";
-}
-
-// ======= SÉLECTION PERSONNE =======
-function selectPerson(name) {
-  const pass = prompt("Mot de passe pour " + name + " :");
-  if (pass === adminPassword) {
-    isAdmin = true;
-    currentPerson = name;
-    openPlanning();
-  } else if (pass === personPasswords[name]) {
-    isAdmin = false;
-    currentPerson = name;
-    openPlanning();
-  } else {
-    alert("Mot de passe incorrect");
-  }
-}
-
-// ======= AFFICHAGE PLANNING =======
-function openPlanning() {
-  document.getElementById("homeScreen").style.display = "none";
-  document.getElementById("planningScreen").style.display = "flex";
-  renderCalendar();
-}
-
-function renderCalendar() {
-  const monthNames = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
-  document.getElementById("monthTitle").textContent = monthNames[currentMonth] + " " + currentYear;
-
-  const calendar = document.getElementById("calendar");
-  calendar.innerHTML = "";
-  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
-
-  for (let d=1; d<=daysInMonth; d++) {
-    const dayDiv = document.createElement("div");
-    dayDiv.className = "dayCard";
-    dayDiv.innerHTML = `<div class="dayNum">${d}</div>`;
-
-    const entry = peopleData[currentPerson].days[d];
-    if (entry) {
-      dayDiv.innerHTML += `<div class="dayType">${entry.detail || ""}</div>`;
-    }
-    if (isAdmin) {
-      dayDiv.onclick = () => editDay(d);
-    }
-    calendar.appendChild(dayDiv);
-  }
-}
-
-// ======= ÉDITION =======
-function editDay(day) {
-  const detail = prompt("Détail de la journée :", peopleData[currentPerson].days[day]?.detail || "");
-  if (detail !== null) {
-    peopleData[currentPerson].days[day] = { detail };
-    saveData();
-    renderCalendar();
-  }
-}
-
-// ======= SAUVEGARDE LOCALE =======
-function saveData() {
-  localStorage.setItem("planningData", JSON.stringify(peopleData));
-}
-
-function loadData() {
-  const saved = localStorage.getItem("planningData");
-  if (saved) {
-    const parsed = JSON.parse(saved);
-    for (let name in parsed) {
-      peopleData[name] = parsed[name];
-    }
-  }
-}
-
-// ======= CHANGEMENT DE MOIS =======
-function prevMonth() {
-  currentMonth--;
-  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
-  renderCalendar();
-}
-function nextMonth() {
-  currentMonth++;
-  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
-  renderCalendar();
-}
-
-// ======= INIT =======
-loadData();
+/* ====== Démarrage ====== */
+loadState();
+renderHome();
 showHome();
 </script>
