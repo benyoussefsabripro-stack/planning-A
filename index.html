@@ -196,7 +196,7 @@
 
 <!-- ===== APPLICATION ===== -->
 <div id="app" class="app" style="display:none">
-  <aside class="side">
+  <aside class="side drawer">
     <div class="logo">🗓️ Planning</div>
     <div class="people" id="people"></div>
     <div class="lock" id="lockInfo">🔒 Lecture seule</div>
@@ -341,6 +341,7 @@
   </div>
 </div>
 
+<div id="overlay"></div>
 <div class="toast" id="toast">Enregistré ✅</div>
 
 <script>
@@ -363,7 +364,7 @@ const CLOUD_PATH = "mbgardiennage/ieseg";
 const ADMIN_PASS="securite";
 const PERSON_PASSES={Momo:"1",Lucas:"2",Sabri:"3",Sofiane:"4",Hamid:"5",Adama:"6",Iddir:"7",Karim:"8"};
 let authRole=null,authUser=null;
-let canEditAll=false, canViewAll=false; // Momo & Admin: edit+view all ; Sabri: view all (read-only)
+let canEditAll=false, canViewAll=false; // Momo & Admin: edit+view all ; Sabri: view a
 
 /* ===== ÉTAT ===== */
 let current="Sabri",currentYear=2025,currentMonth=7,editing=false,editDay=null;
@@ -374,11 +375,11 @@ const monthNames=["janvier","février","mars","avril","mai","juin","juillet","ao
 /* ===== HELPERS ===== */
 function ensureMonth(name,y,m){if(!peopleData[name])peopleData[name]={};if(!peopleData[name][y])peopleData[name][y]={};if(!peopleData[name][y][m])peopleData[name][y][m]={days:{}};return peopleData[name][y][m];}
 const colorOf=t=>({C:'var(--c)',P:'var(--p)',G:'var(--g)',R:'var(--r)'}[t]||'#999');
-function weekNumber(dt){const t=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate()));const d=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-d);const y0=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil((((t-y0)/86400000)+1)/7);}
+function weekNumber(dt){const t=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate()));const d=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-d);const y0=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil((((t-y0)/86400000)+1)/7);} 
 function mondayOf(dt){const d=(dt.getDay()+6)%7;const m=new Date(dt);m.setDate(dt.getDate()-d);return m;}
-function parseTimeToHours(t){const m=t.match(/^(\d{1,2})h(?:(\d{2}))?$/i);if(!m)return null;const H=parseInt(m[1],10),M=parseInt(m[2]||"0",10);return H+(M/60);}
-function computeHoursFromDetail(detail){const times=(detail.match(/\d{1,2}h\d{0,2}/g)||[]).map(parseTimeToHours).filter(v=>v!=null);let s=0;for(let i=0;i+1<times.length;i+=2)s+=times[i+1]-times[i];return Math.round(s*2)/2;}
-function showToast(t){const el=document.getElementById('toast');el.textContent=t||"OK";el.style.display='block';setTimeout(()=>el.style.display='none',1500);}
+function parseTimeToHours(t){const m=t.match(/^(\d{1,2})h(?:(\d{2}))?$/i);if(!m)return null;const H=parseInt(m[1],10),M=parseInt(m[2]||"0",10);return H+(M/60);} 
+function computeHoursFromDetail(detail){const times=(detail.match(/\d{1,2}h\d{0,2}/g)||[]).map(parseTimeToHours).filter(v=>v!=null);let s=0;for(let i=0;i+1<times.length;i+=2)s+=times[i+1]-times[i];return Math.round(s*2)/2;} 
+function showToast(t){const el=document.getElementById('toast');el.textContent=t||"OK";el.style.display='block';setTimeout(()=>el.style.display='none',1500);} 
 
 /* ===== STOCKAGE local (fallback) ===== */
 const STORAGE_KEY="planning_secure_v2";
@@ -390,6 +391,7 @@ async function cloudSave() {
   const payload = { people, peopleData, current, currentYear, currentMonth, ts: Date.now() };
   try {
     await db.ref(CLOUD_PATH).set(payload);
+    document.getElementById('cloudStatus').textContent = 'Dernière sauvegarde: '+new Date().toLocaleString('fr-FR');
     showToast("Sauvegardé en ligne ☁️✅");
   } catch (err) {
     console.error("cloudSave error:", err);
@@ -407,6 +409,7 @@ async function cloudLoad() {
     current = s.current ?? current;
     currentYear = s.currentYear ?? currentYear;
     currentMonth = s.currentMonth ?? currentMonth;
+    document.getElementById('cloudStatus').textContent = 'Chargé du cloud';
     return true;
   } catch (err) {
     console.error("cloudLoad error:", err);
@@ -541,7 +544,7 @@ function render(){
   const cal=document.getElementById('cal');cal.innerHTML='';
   ['lun','mar','mer','jeu','ven','sam','dim'].forEach(d=>{const el=document.createElement('div');el.className='dow';el.textContent=d;cal.appendChild(el);});
   const first=new Date(currentYear,currentMonth,1),offset=(first.getDay()+6)%7,dim=new Date(currentYear,currentMonth+1,0).getDate();
-  for(let i=0;i<offset;i++){const e=document.createElement('div');e.className='card empty';cal.appendChild(e);}
+  for(let i=0;i<offset;i++){const e=document.createElement('div');e.className='card empty';cal.appendChild(e);} 
   for(let day=1;day<=dim;day++){
     const card=document.createElement('div');card.className='card';card.dataset.day=day;
     const dd=document.createElement('div');dd.className='date';dd.textContent=String(day).padStart(2,'0');card.appendChild(dd);
@@ -551,11 +554,11 @@ function render(){
       card.classList.add('work');
       const pill=document.createElement('div');pill.className='pill';pill.dataset.type=info.type;pill.style.background=colorOf(info.type);
       pill.innerHTML=`<span>${info.type}</span> <small>${String(info.hours).replace('.',',')} h</small>`;pill.title=info.detail||'';card.appendChild(pill);
-      if(info.note){const n=document.createElement('div');n.className='note';n.textContent=info.note;card.appendChild(n);}
+      if(info.note){const n=document.createElement('div');n.className='note';n.textContent=info.note;card.appendChild(n);} 
 
       const place=extractPlace(info.detail||"");
       if(place){
-        const mates=findMates({year=currentYear,month=currentMonth,day,place,currentName=current});
+        const mates=findMates({year:currentYear,month:currentMonth,day,place,currentName=current});
         if(mates.length){
           const mEl=document.createElement('div');mEl.className='mates';
           mEl.textContent=`Avec : ${mates.join(', ')}`;
@@ -570,7 +573,7 @@ function render(){
     card.onclick=()=> openInfo(day);
     cal.appendChild(card);
   }
-  const filled=offset+dim,rest=(7-(filled%7))%7;for(let i=0;i<rest;i++){const e=document.createElement('div');e.className='card empty';cal.appendChild(e);}
+  const filled=offset+dim,rest=(7-(filled%7))%7;for(let i=0;i<rest;i++){const e=document.createElement('div');e.className='card empty';cal.appendChild(e);} 
   renderTotals(days);
   updatePrintHeader();
 }
@@ -621,7 +624,7 @@ document.getElementById('btnRange').onclick=async()=>{if(!canEditAll)return aler
   closeEditor();render();
 };
 
-/* ===== Modale INFO JOUR (lecture pour tous) ===== */
+/* ===== Modale INFO JOUR (lecture enrichie) ===== */
 const infoBack=document.getElementById('infoBack'),infoTitle=document.getElementById('infoTitle'),infoBody=document.getElementById('infoBody'),infoClose=document.getElementById('infoClose'),infoEdit=document.getElementById('infoEdit');
 let infoDay=null;
 function openInfo(day){
@@ -636,11 +639,16 @@ function openInfo(day){
   }else{
     const place=extractPlace(data.detail||"");
     const mates= place ? findMates({year:currentYear,month:currentMonth,day,place,currentName:current}) : [];
-    const precise = (data.detail||'').match(/\d{1,2}h\d{0,2}/g)?.join(' — ') || '—';
+    const preciseList = (data.detail||'').match(/\d{1,2}h\d{0,2}/g) || [];
+    const precise = preciseList.length ? preciseList.join(' — ') : '—';
+
+    // Bandeau heures précises en grand
+    const band=document.createElement('div');
+    band.style.display='flex';band.style.alignItems='center';band.style.gap='10px';band.style.background='#0c1a33';band.style.border='1px solid #2a3d6d';band.style.borderRadius='12px';band.style.padding='10px 12px';
+    band.innerHTML = `<div style="font-size:22px;font-weight:900">⏰ ${precise}</div><div style="margin-left:auto;font-weight:800;padding:6px 10px;border-radius:999px;background:${colorOf(data.type)}">${data.type} · ${(data.hours??'-')} h</div>`;
+    infoBody.appendChild(band);
+
     const items = [
-      ["Type", data.type || '—'],
-      ["Heures (total)", (data.hours ?? '—') + (data.hours!=null?' h':'')],
-      ["Heures (détail)", precise],
       ["Lieu", place || '—'],
       ["Détail", data.detail || '—'],
       ["Note", data.note || '—'],
@@ -665,4 +673,65 @@ infoEdit.onclick=()=>{ if(infoDay!=null){ infoBack.style.display='none'; openEdi
 const mpb=document.getElementById('mpb'),monthGrid=document.getElementById('monthGrid'),curYearEl=document.getElementById('curYear');
 document.getElementById('monthLabel').onclick=()=>{curYearEl.textContent=currentYear;monthGrid.innerHTML='';monthNames.forEach((n,i)=>{const b=document.createElement('button');b.textContent=n[0].toUpperCase()+n.slice(1);b.onclick=()=>{currentMonth=i;mpb.style.display='none';saveLocal();cloudSave().catch(()=>{});render();};monthGrid.appendChild(b);});mpb.style.display='flex';};
 document.getElementById('mpClose').onclick=()=>mpb.style.display='none';
-mpb.addEventListener('click',e=>{if
+mpb.addEventListener('click',e=>{if(e.target===mpb){mpb.style.display='none';}});
+
+/* ===== People manager ===== */
+const peopleModal=document.getElementById('peopleModal');
+const pmList=document.getElementById('pmList');
+const pmAdd=document.getElementById('pmAdd');
+const pmSave=document.getElementById('pmSave');
+const pmCancel=document.getElementById('pmCancel');
+
+document.getElementById('btnPeople').onclick=()=>{
+  if(!canEditAll) return;
+  pmList.innerHTML='';
+  people.forEach((name,idx)=>{
+    const row=document.createElement('div');
+    row.style.display='grid';row.style.gridTemplateColumns='1fr auto';row.style.gap='8px';row.style.margin='6px 0';
+    row.innerHTML=`<input value="${name}" data-idx="${idx}"/> <button class="danger" data-del="${idx}">Supprimer</button>`;
+    pmList.appendChild(row);
+  });
+  peopleModal.style.display='flex';
+};
+pmAdd.onclick=()=>{
+  const newName=prompt('Nouveau nom :');
+  if(!newName) return;
+  if(!people.includes(newName)) people.push(newName);
+  ensureMonth(newName,currentYear,currentMonth);
+  document.getElementById('btnPeople').click();
+};
+pmSave.onclick=async()=>{
+  const inputs=[...pmList.querySelectorAll('input[data-idx]')];
+  const newPeople=inputs.map(i=>i.value.trim()).filter(Boolean);
+  if(!newPeople.length) return alert('La liste ne peut pas être vide.');
+  people=[...new Set(newPeople)];
+  saveLocal(); try{await cloudSave();}catch{}
+  peopleModal.style.display='none';
+  renderSidebar(); render();
+};
+pmCancel.onclick=()=>{peopleModal.style.display='none';};
+pmList.addEventListener('click',e=>{
+  if(e.target.matches('button[data-del]')){
+    const idx=Number(e.target.getAttribute('data-del'));
+    const name=people[idx];
+    if(confirm(`Supprimer ${name} de la liste ?`)){
+      people.splice(idx,1);
+      document.getElementById('btnPeople').click();
+    }
+  }
+});
+
+/* ===== Toolbar actions ===== */
+document.getElementById('btnPdf').onclick=()=>{updatePrintHeader(); setTimeout(()=>window.print(),50);} ;
+document.getElementById('btnBackup').onclick=()=>{
+  const blob=new Blob([JSON.stringify({people,peopleData,current,currentYear,currentMonth},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`planning-backup-${Date.now()}.json`;a.click();
+};
+document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
+document.getElementById('fileImport').addEventListener('change',async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{
+    const txt=await f.text();
+    const data=JSON.parse(txt);
+    if(data.people) people=data.people;
+    if(data.peopleData){ for (const k in peopleData) delete peopleData[k]; Object.assign(peopleData,data.peopleData); }
