@@ -81,10 +81,8 @@
   .note{font-size:12px;color:#a78bfa;margin-top:6px}
   .mates{font-size:12px;color:#94a3b8;margin-top:6px}
   .empty{opacity:.25}
-  footer{color:#9aa3b2;text-align:center;padding:14px}
-  .small{font-size:11px}
 
-  /* Modals */
+  /* Modals (édition + info) */
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
   .chip{background:var(--chip);border:1px solid var(--chip-bd);border-radius:999px;padding:7px 10px;font-weight:800;cursor:pointer}
   .chip:hover{background:#182a55}
@@ -120,12 +118,50 @@
   }
 
   .toast{position:fixed;right:18px;bottom:18px;background:#111827;color:#fff;padding:10px 14px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.2);display:none;z-index:50}
-  @media print{
-    #home,.side,header .toolbar,#menuBtn,#overlay,.modal-back,.small,.toast{display:none}
-    .card{break-inside:avoid}
-    .card.work .date{font-weight:900}
-    .card.work .pill{font-weight:900}
-    body{background:#fff}
+
+  /* ===== Print haute qualité ===== */
+  @page { size: A4 landscape; margin: 10mm; }
+  * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+  #printHeader { display:none; }
+  #printHeader .ph-top{display:flex;justify-content:space-between;align-items:flex-end}
+  #printHeader .ph-brand{font-weight:900;font-size:18px}
+  #printHeader .ph-meta{display:flex;gap:12px;color:#333}
+  #printHeader .ph-legend{display:flex;gap:12px;margin:6px 0 2px}
+  #printHeader .ph-sep{border:0;border-top:2px solid #ddd;margin:6px 0 10px}
+  #printHeader .sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-2px;border:1px solid #999}
+  #printHeader .ph-c{background:#1e88ff}
+  #printHeader .ph-p{background:#08a86b}
+  #printHeader .ph-g{background:#ff8a2a}
+  #printHeader .ph-r{background:#8b5cf6}
+
+  @media print {
+    html,body { background:#fff; color:#111; }
+    .header, #home, .side, header .toolbar, #menuBtn, #overlay, .modal-back, .small, .toast { display:none !important; }
+    #printHeader { display:block !important; }
+    .wrap { max-width: none; padding:0; margin:0; }
+    .legend { display:none !important; }
+
+    .calendar { grid-template-columns: repeat(7, 1fr) !important; gap: 6px !important; }
+    .card { background:#fff !important; border:1px solid #d9dee8 !important; box-shadow:none !important; min-height:92px !important; padding:8px 8px 6px 8px !important; }
+    .card.work { border-color:#9db6ff !important; }
+    .date { color:#374151 !important; font-weight:700 !important; font-size:12px !important; }
+
+    .pill { margin-top:18px !important; padding:6px 9px !important; font-size:12px !important; border:1px solid rgba(0,0,0,.08) !important; color:#000 !important; }
+    .pill[data-type="C"]{ background:#d9e8ff !important; }
+    .pill[data-type="P"]{ background:#d6f4e4 !important; }
+    .pill[data-type="G"]{ background:#ffe4cc !important; }
+    .pill[data-type="R"]{ background:#eadcff !important; }
+
+    .note  { color:#444 !important; font-size:11px !important; margin-top:4px !important; }
+    .mates { color:#333 !important; font-size:11px !important; margin-top:4px !important; }
+    .card { break-inside: avoid; page-break-inside: avoid; }
+
+    .totals { display:flex; justify-content:flex-end; gap:6px; margin:4px 0 8px 0 !important; }
+    .box { background:#fff !important; border:1px solid #d9dee8 !important; box-shadow:none !important; padding:6px 8px !important; border-radius:8px !important; }
+    .box h3 { font-size:10px !important; color:#555 !important; margin:0 0 2px !important; }
+    .box div { font-size:13px !important; color:#111 !important; }
+    .pill, .sw { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   }
 </style>
 </head>
@@ -187,6 +223,26 @@
     </header>
 
     <div class="wrap">
+
+      <!-- En-tête spécial PDF -->
+      <div id="printHeader" style="display:none">
+        <div class="ph-top">
+          <div class="ph-brand">MB Gardiennage — Planning</div>
+          <div class="ph-meta">
+            <div><b id="phPerson">—</b></div>
+            <div id="phMonth">—</div>
+            <div>Généré le <span id="phDate">—</span></div>
+          </div>
+        </div>
+        <div class="ph-legend">
+          <span><span class="sw ph-c"></span> C</span>
+          <span><span class="sw ph-p"></span> P</span>
+          <span><span class="sw ph-g"></span> G</span>
+          <span><span class="sw ph-r"></span> R</span>
+        </div>
+        <hr class="ph-sep" />
+      </div>
+
       <div class="legend">
         <span class="tag"><span class="sw" style="background:var(--c)"></span> C</span>
         <span class="tag"><span class="sw" style="background:var(--p)"></span> P</span>
@@ -195,13 +251,12 @@
       </div>
       <div id="totals" class="totals"></div>
       <div id="cal" class="calendar" aria-live="polite"></div>
-      <p class="small">Dernière mise à jour : <span id="now"></span></p>
+      <!-- (footer supprimé) -->
     </div>
-    <footer>Jours travaillés en <b>gras</b> sur le PDF. Admin : <b>securite</b>.</footer>
   </main>
 </div>
 
-<!-- ===== MODALE JOUR ===== -->
+<!-- ===== MODALE JOUR (ÉDITION) ===== -->
 <div class="modal-back" id="mb">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
     <h2 id="mTitle">Modifier</h2>
@@ -250,6 +305,20 @@
   </div>
 </div>
 
+<!-- ===== MODALE INFO JOUR (LECTURE) ===== -->
+<div class="modal-back" id="infoBack">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3 id="infoTitle" style="margin-top:0">Détails du jour</h3>
+    <div id="infoBody" style="display:grid;grid-template-columns:1fr;gap:8px">
+      <!-- contenu injecté -->
+    </div>
+    <div class="actions">
+      <button id="infoEdit" class="primary" style="display:none">Modifier</button>
+      <button id="infoClose">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <!-- Sélecteur de mois -->
 <div class="modal-back" id="mpb">
   <div class="modal" role="dialog" aria-modal="true">
@@ -279,9 +348,9 @@
 const firebaseConfig = {
   apiKey: "AIzaSyDzRKWYfnCiTQYogVQmYngfoCqGZlQxtJk",
   authDomain: "planning-secu.firebaseapp.com",
-  databaseURL: "https://planning-secu-default-rtdb.europe-west1.firebasedatabase.app/", /* slash final */
+  databaseURL: "https://planning-secu-default-rtdb.europe-west1.firebasedatabase.app/",
   projectId: "planning-secu",
-  storageBucket: "planning-secu.appspot.com", /* corrigé */
+  storageBucket: "planning-secu.appspot.com",
   messagingSenderId: "688317228037",
   appId: "1:688317228037:web:eb57c7efdbfd081c96286c",
   measurementId: "G-H5XDZDJMH5"
@@ -346,7 +415,7 @@ async function cloudLoad() {
   }
 }
 
-/* ===== SEED : un exemple Sabri août, autres vides ===== */
+/* ===== SEED Exemple Sabri août (autres vides) ===== */
 function seedDefaultsIfEmpty(){
   const hasSabri=peopleData["Sabri"]&&peopleData["Sabri"][2025]&&peopleData["Sabri"][2025][7];
   if(!hasSabri){
@@ -444,7 +513,7 @@ function enterApp(initialName){
   document.getElementById('btnPeople').disabled=!canEditAll;
   document.getElementById('btnEdit').disabled=!canEditAll;
   document.getElementById('lockInfo').textContent = canEditAll ? "✅ Édition autorisée" : (canViewAll ? "👁️ Lecture (tous plannings)" : "👁️ Lecture (planning perso)");
-  renderSidebar(); render(); document.getElementById('now').textContent=new Date().toLocaleString('fr-FR');
+  renderSidebar(); render(); document.getElementById('now')?.textContent=new Date().toLocaleString('fr-FR');
 }
 function goHome(){editing=false;document.getElementById('app').style.display='none';document.getElementById('home').style.display='flex';}
 document.getElementById('btnHome').onclick=goHome;
@@ -484,10 +553,9 @@ function render(){
       pill.innerHTML=`<span>${info.type}</span> <small>${String(info.hours).replace('.',',')} h</small>`;pill.title=info.detail||'';card.appendChild(pill);
       if(info.note){const n=document.createElement('div');n.className='note';n.textContent=info.note;card.appendChild(n);}
 
-      // === Ajout : afficher les collègues au même lieu
       const place=extractPlace(info.detail||"");
       if(place){
-        const mates=findMates({year:currentYear,month:currentMonth,day,place,currentName:current});
+        const mates=findMates({year=currentYear,month=currentMonth,day,place,currentName=current});
         if(mates.length){
           const mEl=document.createElement('div');mEl.className='mates';
           mEl.textContent=`Avec : ${mates.join(', ')}`;
@@ -498,12 +566,13 @@ function render(){
       const plus=document.createElement('div');plus.className='pill';plus.style.background='#27406f';plus.textContent='+ Ajouter';plus.style.color='#fff';plus.style.marginTop='22px';card.appendChild(plus);
     }
 
-    // édition seulement si admin
-    card.onclick=()=> (editing&&canEditAll) && openEditor(day);
+    // Clic: pop-up d'info pour tous. Si admin & édition, bouton "Modifier" dans la modale.
+    card.onclick=()=> openInfo(day);
     cal.appendChild(card);
   }
   const filled=offset+dim,rest=(7-(filled%7))%7;for(let i=0;i<rest;i++){const e=document.createElement('div');e.className='card empty';cal.appendChild(e);}
   renderTotals(days);
+  updatePrintHeader();
 }
 function renderTotals(days){
   const totals=document.getElementById('totals');totals.innerHTML='';let monthSum=0;Object.values(days).forEach(v=>monthSum+=Number(v.hours||0));
@@ -514,7 +583,7 @@ function renderTotals(days){
   function box(t,v){const el=document.createElement('div');el.className='box';el.innerHTML=`<h3>${t}</h3><div>${v}</div>`;return el;}
 }
 
-/* ===== Modale jour (admin) ===== */
+/* ===== Modale JOUR (édition) ===== */
 const mb=document.getElementById('mb');const fType=document.getElementById('fType'),fHours=document.getElementById('fHours'),fDetail=document.getElementById('fDetail'),fNote=document.getElementById('fNote');
 function openEditor(day){
   editDay=day;const d=ensureMonth(current,currentYear,currentMonth).days[day]||{type:'C',hours:'',detail:'',note:''};
@@ -552,73 +621,48 @@ document.getElementById('btnRange').onclick=async()=>{if(!canEditAll)return aler
   closeEditor();render();
 };
 
+/* ===== Modale INFO JOUR (lecture pour tous) ===== */
+const infoBack=document.getElementById('infoBack'),infoTitle=document.getElementById('infoTitle'),infoBody=document.getElementById('infoBody'),infoClose=document.getElementById('infoClose'),infoEdit=document.getElementById('infoEdit');
+let infoDay=null;
+function openInfo(day){
+  infoDay=day;
+  const data=ensureMonth(current,currentYear,currentMonth).days[day]||null;
+  const dateStr=`${String(day).padStart(2,'0')}/${String(currentMonth+1).padStart(2,'0')}/${currentYear}`;
+  infoTitle.textContent = `${dateStr} — ${current}`;
+  infoBody.innerHTML='';
+
+  if(!data){
+    infoBody.innerHTML = `<div>Aucune donnée pour ce jour.</div>`;
+  }else{
+    const place=extractPlace(data.detail||"");
+    const mates= place ? findMates({year:currentYear,month:currentMonth,day,place,currentName:current}) : [];
+    const precise = (data.detail||'').match(/\d{1,2}h\d{0,2}/g)?.join(' — ') || '—';
+    const items = [
+      ["Type", data.type || '—'],
+      ["Heures (total)", (data.hours ?? '—') + (data.hours!=null?' h':'')],
+      ["Heures (détail)", precise],
+      ["Lieu", place || '—'],
+      ["Détail", data.detail || '—'],
+      ["Note", data.note || '—'],
+      ["Avec", mates.length ? mates.join(', ') : '—']
+    ];
+    items.forEach(([k,v])=>{
+      const row=document.createElement('div');
+      row.style.display='grid';row.style.gridTemplateColumns='160px 1fr';row.style.gap='8px';
+      row.innerHTML=`<div style="color:#9aa3b2;font-weight:700">${k}</div><div>${v}</div>`;
+      infoBody.appendChild(row);
+    });
+  }
+
+  infoEdit.style.display = (canEditAll && editing) ? 'inline-block' : 'none';
+  infoBack.style.display='flex';
+}
+infoClose.onclick=()=>{infoBack.style.display='none'; infoDay=null;};
+infoBack.addEventListener('click',e=>{if(e.target===infoBack){infoBack.style.display='none';infoDay=null;}});
+infoEdit.onclick=()=>{ if(infoDay!=null){ infoBack.style.display='none'; openEditor(infoDay); } };
+
 /* ===== Mois ===== */
 const mpb=document.getElementById('mpb'),monthGrid=document.getElementById('monthGrid'),curYearEl=document.getElementById('curYear');
 document.getElementById('monthLabel').onclick=()=>{curYearEl.textContent=currentYear;monthGrid.innerHTML='';monthNames.forEach((n,i)=>{const b=document.createElement('button');b.textContent=n[0].toUpperCase()+n.slice(1);b.onclick=()=>{currentMonth=i;mpb.style.display='none';saveLocal();cloudSave().catch(()=>{});render();};monthGrid.appendChild(b);});mpb.style.display='flex';};
 document.getElementById('mpClose').onclick=()=>mpb.style.display='none';
-mpb.addEventListener('click',e=>{if(e.target===mpb)mpb.style.display='none';});
-
-/* ===== People manager (admin) ===== */
-const pm=document.getElementById('peopleModal'),pmList=document.getElementById('pmList');
-document.getElementById('btnPeople').onclick=()=>{if(!canEditAll)return alert("Réservé à l’admin.");
-  pmList.innerHTML='';people.forEach(name=>{const row=document.createElement('div');row.className='pm-row';
-    const inp=document.createElement('input');inp.value=name;const del=document.createElement('button');del.textContent='Supprimer';del.className='danger';
-    del.onclick=()=>{if(!confirm(`Supprimer "${name}" ?`))return;if(current===name){const next=people.find(n=>n!==name)||"Sabri";current=next;}delete peopleData[name];people=people.filter(n=>n!==name);row.remove();};
-    row.appendChild(inp);row.appendChild(del);pmList.appendChild(row);
-  });pm.style.display='flex';
-};
-document.getElementById('pmAdd').onclick=()=>{const row=document.createElement('div');row.className='pm-row';const inp=document.createElement('input');inp.placeholder='Nouveau nom';const del=document.createElement('button');del.textContent='Supprimer';del.className='danger';del.onclick=()=>row.remove();row.appendChild(inp);row.appendChild(del);pmList.appendChild(row);};
-document.getElementById('pmCancel').onclick=()=>pm.style.display='none';
-document.getElementById('pmSave').onclick=async()=>{const inputs=pmList.querySelectorAll('input');const list=[];inputs.forEach(i=>{const v=i.value.trim();if(v&&!list.includes(v))list.push(v);});if(!list.length)return alert("Il faut au moins un nom.");
-  const newData={};list.forEach(n=>newData[n]=peopleData[n]||{});if(!list.includes(current))current=list[0];people=list;for(const k in peopleData)delete peopleData[k];Object.assign(peopleData,newData);
-  pm.style.display='none';saveLocal(); try{await cloudSave();}catch{} renderSidebar();render();
-};
-pm.addEventListener('click',e=>{if(e.target===pm)pm.style.display='none';});
-
-/* ===== Header actions ===== */
-document.getElementById('btnPdf').onclick=()=>window.print();
-document.getElementById('btnEdit').onclick=()=>{if(!canEditAll)return;editing=!editing;document.getElementById('btnEdit').textContent=editing?'Quitter l’édition':'Activer l’édition';if(!editing)document.getElementById('mb').style.display='none';render();};
-document.getElementById('btnSaveAll').onclick=async()=>{saveLocal(); try{await cloudSave();}catch{showToast("Sauvegarde locale (offline) ✅");}};
-document.getElementById('btnBackup').onclick=()=>{const blob=new Blob([localStorage.getItem(STORAGE_KEY)||"{}"],{type:"application/json"});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download="planning.json";a.click();URL.revokeObjectURL(a.href);};
-document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
-document.getElementById('fileImport').onchange=async e=>{const f=e.target.files[0];if(!f)return;const t=await f.text();localStorage.setItem(STORAGE_KEY,t);loadLocal();renderSidebar();render(); try{await cloudSave();}catch{} showToast("Planning importé ☁️");};
-
-/* ===== Drawer mobile ===== */
-const sideEl=document.querySelector('.side');const overlayEl=document.getElementById('overlay');const menuBtn=document.getElementById('menuBtn');
-function applyDrawerMode(){if(window.matchMedia('(max-width:880px)').matches){sideEl.classList.add('drawer');}else{sideEl.classList.remove('drawer','open');document.body.classList.remove('menu-open');overlayEl&&(overlayEl.style.display='none');}}
-function openMenu(){if(!sideEl.classList.contains('drawer'))return;sideEl.classList.add('open');document.body.classList.add('menu-open');overlayEl&&(overlayEl.style.display='block');}
-function closeMenu(){sideEl.classList.remove('open');document.body.classList.remove('menu-open');overlayEl&&(overlayEl.style.display='none');}
-menuBtn.addEventListener('click',openMenu);overlayEl&&overlayEl.addEventListener('click',closeMenu);window.addEventListener('resize',applyDrawerMode);applyDrawerMode();
-
-/* ===== Cloud status + test ===== */
-const statusEl=document.getElementById('cloudStatus');
-firebase.database().ref('.info/connected').on('value', s => {
-  statusEl.textContent = s.val() ? 'Cloud: connecté' : 'Cloud: hors-ligne';
-});
-document.getElementById('btnCloudTest').onclick=async()=>{
-  try{
-    const path=CLOUD_PATH+'/_ping';
-    await db.ref(path).set({at:Date.now()});
-    const snap=await db.ref(path).get();
-    alert('Écriture/lecture OK: '+JSON.stringify(snap.val()));
-  }catch(e){alert('Erreur Cloud: '+(e?.message||e));console.error(e);}
-};
-
-/* ===== BOOT (CLOUD FIRST) ===== */
-(async ()=>{
-  let loadedCloud=false;
-  try{ loadedCloud=await cloudLoad(); }catch{ loadedCloud=false; }
-  if(!loadedCloud){
-    const hadLocal=loadLocal();
-    if(!hadLocal) seedDefaultsIfEmpty();
-  }
-  document.getElementById('now').textContent=new Date().toLocaleString('fr-FR');
-  document.getElementById('home').style.display='flex';
-  document.getElementById('app').style.display='none';
-})();
-</script>
-
-<!-- Overlay pour tiroir mobile -->
-<div id="overlay"></div>
-</body>
-</html>
+mpb.addEventListener('click',e=>{if
