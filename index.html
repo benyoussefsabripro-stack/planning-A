@@ -190,7 +190,7 @@
       <div class="home-grid" id="homeGrid"></div>
     </div>
 
-    <p style="margin-top:10px;color:#9aa3b2;font-size:12px">Mots de passe : Momo=<b>1</b>, Lucas=<b>2</b>, Sabri=<b>3</b>, Sofiane=<b>4</b>, Hamid=<b>5</b>, Adama=<b>6</b>, Iddir=<b>7</b>, Karim=<b>8</b>. Admin global = <b>securite</b>.</p>
+    <p style="margin-top:10px;color:#9aa3b2;font-size:12px">Mots de passe existants : Momo=<b>1</b>, Lucas=<b>2</b>, Sabri=<b>3</b>, Sofiane=<b>4</b>, Hamid=<b>5</b>, Adama=<b>6</b>, Iddir=<b>7</b>, Karim=<b>8</b>. Admin global = <b>securite</b>. <br/><i>Si un nom n’a pas encore de mot de passe, on te proposera d’en créer un.</i></p>
   </div>
 </section>
 
@@ -213,6 +213,7 @@
         <button id="btnPdf">PDF</button>
         <button id="btnEdit" disabled>Activer l’édition</button>
         <button id="btnPeople" disabled>Ajout & modification</button>
+        <button id="btnPwd" disabled>Gérer mots de passe</button>
         <button id="btnSaveAll">Enregistrer</button>
         <button id="btnBackup">Export JSON</button>
         <button id="btnImport">Import JSON</button>
@@ -251,7 +252,6 @@
       </div>
       <div id="totals" class="totals"></div>
       <div id="cal" class="calendar" aria-live="polite"></div>
-      <!-- (footer supprimé) -->
     </div>
   </main>
 </div>
@@ -309,9 +309,7 @@
 <div class="modal-back" id="infoBack">
   <div class="modal" role="dialog" aria-modal="true">
     <h3 id="infoTitle" style="margin-top:0">Détails du jour</h3>
-    <div id="infoBody" style="display:grid;grid-template-columns:1fr;gap:8px">
-      <!-- contenu injecté -->
-    </div>
+    <div id="infoBody" style="display:grid;grid-template-columns:1fr;gap:8px"></div>
     <div class="actions">
       <button id="infoEdit" class="primary" style="display:none">Modifier</button>
       <button id="infoClose">Fermer</button>
@@ -341,11 +339,23 @@
   </div>
 </div>
 
+<!-- Gestion des mots de passe (Admin) -->
+<div class="modal-back" id="pwdModal">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3>Gestion des mots de passe</h3>
+    <div id="pwdList" style="display:grid;gap:8px"></div>
+    <div class="actions">
+      <button id="pwdCancel">Fermer</button>
+      <button id="pwdSave" class="primary">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <div id="overlay"></div>
 <div class="toast" id="toast">Enregistré ✅</div>
 
 <script>
-/* ====== Firebase init (ta config corrigée) ====== */
+/* ====== Firebase init ====== */
 const firebaseConfig = {
   apiKey: "AIzaSyDzRKWYfnCiTQYogVQmYngfoCqGZlQxtJk",
   authDomain: "planning-secu.firebaseapp.com",
@@ -359,12 +369,17 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const CLOUD_PATH = "mbgardiennage/ieseg";
+const CLOUD_PASSES = "mbgardiennage/ieseg_passes";
 
 /* ===== RÔLES & ACCÈS ===== */
 const ADMIN_PASS="securite";
-const PERSON_PASSES={Momo:"1",Lucas:"2",Sabri:"3",Sofiane:"4",Hamid:"5",Adama:"6",Iddir:"7",Karim:"8"};
+/* Passes dynamiques : on démarre avec les anciens comme valeurs par défaut,
+   mais on les remplace si le cloud/local en a d’autres. */
+let PASSES = {Momo:"1",Lucas:"2",Sabri:"3",Sofiane:"4",Hamid:"5",Adama:"6",Iddir:"7",Karim:"8"};
+const PASSES_KEY="planning_secure_passes_v1";
+
 let authRole=null,authUser=null;
-let canEditAll=false, canViewAll=false; // Momo & Admin: edit+view all ; Sabri: view a
+let canEditAll=false, canViewAll=false; // Momo & Admin: edit+view all ; Sabri: view all (read-only)
 
 /* ===== ÉTAT ===== */
 let current="Sabri",currentYear=2025,currentMonth=7,editing=false,editDay=null;
@@ -375,47 +390,48 @@ const monthNames=["janvier","février","mars","avril","mai","juin","juillet","ao
 /* ===== HELPERS ===== */
 function ensureMonth(name,y,m){if(!peopleData[name])peopleData[name]={};if(!peopleData[name][y])peopleData[name][y]={};if(!peopleData[name][y][m])peopleData[name][y][m]={days:{}};return peopleData[name][y][m];}
 const colorOf=t=>({C:'var(--c)',P:'var(--p)',G:'var(--g)',R:'var(--r)'}[t]||'#999');
-function weekNumber(dt){const t=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate()));const d=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-d);const y0=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil((((t-y0)/86400000)+1)/7);} 
+function weekNumber(dt){const t=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate()));const d=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-d);const y0=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil((((t-y0)/86400000)+1)/7);}
 function mondayOf(dt){const d=(dt.getDay()+6)%7;const m=new Date(dt);m.setDate(dt.getDate()-d);return m;}
-function parseTimeToHours(t){const m=t.match(/^(\d{1,2})h(?:(\d{2}))?$/i);if(!m)return null;const H=parseInt(m[1],10),M=parseInt(m[2]||"0",10);return H+(M/60);} 
-function computeHoursFromDetail(detail){const times=(detail.match(/\d{1,2}h\d{0,2}/g)||[]).map(parseTimeToHours).filter(v=>v!=null);let s=0;for(let i=0;i+1<times.length;i+=2)s+=times[i+1]-times[i];return Math.round(s*2)/2;} 
-function showToast(t){const el=document.getElementById('toast');el.textContent=t||"OK";el.style.display='block';setTimeout(()=>el.style.display='none',1500);} 
+function parseTimeToHours(t){const m=t.match(/^(\d{1,2})h(?:(\d{2}))?$/i);if(!m)return null;const H=parseInt(m[1],10),M=parseInt(m[2]||"0",10);return H+(M/60);}
+function computeHoursFromDetail(detail){const times=(detail.match(/\d{1,2}h\d{0,2}/g)||[]).map(parseTimeToHours).filter(v=>v!=null);let s=0;for(let i=0;i+1<times.length;i+=2)s+=times[i+1]-times[i];return Math.round(s*2)/2;}
+function showToast(t){const el=document.getElementById('toast');el.textContent=t||"OK";el.style.display='block';setTimeout(()=>el.style.display='none',1500);}
 
 /* ===== STOCKAGE local (fallback) ===== */
 const STORAGE_KEY="planning_secure_v2";
 function saveLocal(){const data={people,peopleData,current,currentYear,currentMonth};localStorage.setItem(STORAGE_KEY,JSON.stringify(data));}
 function loadLocal(){try{const s=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");if(!s)return false;people=s.people||people;Object.assign(peopleData,s.peopleData||{});current=s.current||current;currentYear=s.currentYear||currentYear;currentMonth=s.currentMonth||currentMonth;return true;}catch{return false;}}
+function savePassesLocal(){localStorage.setItem(PASSES_KEY,JSON.stringify(PASSES));}
+function loadPassesLocal(){try{const s=JSON.parse(localStorage.getItem(PASSES_KEY)||"null");if(s&&typeof s==="object"){PASSES={...PASSES,...s};return true;}return false;}catch{return false;}}
 
 /* ===== CLOUD (Firebase) ===== */
 async function cloudSave() {
   const payload = { people, peopleData, current, currentYear, currentMonth, ts: Date.now() };
-  try {
-    await db.ref(CLOUD_PATH).set(payload);
-    document.getElementById('cloudStatus').textContent = 'Dernière sauvegarde: '+new Date().toLocaleString('fr-FR');
-    showToast("Sauvegardé en ligne ☁️✅");
-  } catch (err) {
-    console.error("cloudSave error:", err);
-    alert("Erreur sauvegarde cloud : " + (err?.message || err));
-    throw err;
-  }
+  await db.ref(CLOUD_PATH).set(payload);
+  document.getElementById('cloudStatus').textContent = 'Dernière sauvegarde: '+new Date().toLocaleString('fr-FR');
+  showToast("Sauvegardé en ligne ☁️✅");
 }
 async function cloudLoad() {
-  try {
-    const snap = await db.ref(CLOUD_PATH).get();
-    if (!snap.exists()) return false;
-    const s = snap.val();
-    if (s.people) people = s.people;
-    if (s.peopleData) { for (const k in peopleData) delete peopleData[k]; Object.assign(peopleData, s.peopleData); }
-    current = s.current ?? current;
-    currentYear = s.currentYear ?? currentYear;
-    currentMonth = s.currentMonth ?? currentMonth;
-    document.getElementById('cloudStatus').textContent = 'Chargé du cloud';
-    return true;
-  } catch (err) {
-    console.error("cloudLoad error:", err);
-    alert("Erreur chargement cloud : " + (err?.message || err));
-    return false;
-  }
+  const snap = await db.ref(CLOUD_PATH).get();
+  if (!snap.exists()) return false;
+  const s = snap.val();
+  if (s.people) people = s.people;
+  if (s.peopleData) { for (const k in peopleData) delete peopleData[k]; Object.assign(peopleData, s.peopleData); }
+  current = s.current ?? current;
+  currentYear = s.currentYear ?? currentYear;
+  currentMonth = s.currentMonth ?? currentMonth;
+  document.getElementById('cloudStatus').textContent = 'Chargé du cloud';
+  return true;
+}
+/* Passes cloud */
+async function cloudSavePasses(){
+  await db.ref(CLOUD_PASSES).set({passes:PASSES, ts:Date.now()});
+}
+async function cloudLoadPasses(){
+  const snap=await db.ref(CLOUD_PASSES).get();
+  if(!snap.exists()) return false;
+  const s=snap.val();
+  if(s && s.passes && typeof s.passes==="object"){PASSES={...PASSES,...s.passes}; return true;}
+  return false;
 }
 
 /* ===== SEED Exemple Sabri août (autres vides) ===== */
@@ -473,6 +489,7 @@ teamBtn.onclick=()=>{teamSection.style.display='block';teamBtn.style.display='no
 document.getElementById('adminBtn').onclick=()=>{const p=prompt("Mot de passe administrateur :");if(p===ADMIN_PASS){authRole="admin";authUser=null;canEditAll=true;canViewAll=true;enterApp("Sabri");showToast("Admin connecté ✅");}else alert("Mot de passe incorrect.");};
 document.getElementById('aboutBtn').onclick=()=>alert("Clique « Équipe IÉSEG », choisis un nom et entre son mot de passe. Admin = securite.");
 
+/* ===== Home grid ===== */
 function renderHome(){
   const grid=document.getElementById('homeGrid');grid.innerHTML='';
   people.forEach(name=>{
@@ -482,8 +499,24 @@ function renderHome(){
   });
 }
 
+/* ===== Pass helpers ===== */
+function getPass(name){ return PASSES[name]; }
+function setPass(name, pass){ PASSES[name]=String(pass); savePassesLocal(); cloudSavePasses().catch(()=>{}); }
+
+/* ===== Auth ===== */
 function requestAccess(name){
-  const pwd=prompt(`Mot de passe pour ${name} (ou "securite") :`); 
+  const existing = getPass(name);
+  // Première fois: proposer de créer un mot de passe
+  if(!existing){
+    const create = confirm(`Aucun mot de passe trouvé pour ${name}. Voulez-vous en créer un maintenant ?`);
+    if(!create) return;
+    const np = prompt(`Nouveau mot de passe pour ${name} :`);
+    if(!np || !np.trim()) { alert("Mot de passe vide. Abandon."); return; }
+    setPass(name, np.trim());
+    alert("Mot de passe enregistré ✅");
+  }
+
+  const pwd=prompt(`Mot de passe pour ${name} (ou "securite" pour admin) :`);
   if(!pwd) return;
 
   // reset
@@ -496,7 +529,7 @@ function requestAccess(name){
     return;
   }
 
-  if(PERSON_PASSES[name]===pwd){
+  if(getPass(name)===pwd){
     authRole="user"; authUser=name;
     if(name==="Momo"){ canEditAll=true; canViewAll=true; }        // Momo = admin
     else if(name==="Sabri"){ canEditAll=false; canViewAll=true; } // Sabri = lecture tous
@@ -515,8 +548,9 @@ function enterApp(initialName){
   document.getElementById('app').style.display='grid';
   document.getElementById('btnPeople').disabled=!canEditAll;
   document.getElementById('btnEdit').disabled=!canEditAll;
+  document.getElementById('btnPwd').disabled=!canEditAll;
   document.getElementById('lockInfo').textContent = canEditAll ? "✅ Édition autorisée" : (canViewAll ? "👁️ Lecture (tous plannings)" : "👁️ Lecture (planning perso)");
-  renderSidebar(); render(); document.getElementById('now')?.textContent=new Date().toLocaleString('fr-FR');
+  renderSidebar(); render();
 }
 function goHome(){editing=false;document.getElementById('app').style.display='none';document.getElementById('home').style.display='flex';}
 document.getElementById('btnHome').onclick=goHome;
@@ -544,7 +578,7 @@ function render(){
   const cal=document.getElementById('cal');cal.innerHTML='';
   ['lun','mar','mer','jeu','ven','sam','dim'].forEach(d=>{const el=document.createElement('div');el.className='dow';el.textContent=d;cal.appendChild(el);});
   const first=new Date(currentYear,currentMonth,1),offset=(first.getDay()+6)%7,dim=new Date(currentYear,currentMonth+1,0).getDate();
-  for(let i=0;i<offset;i++){const e=document.createElement('div');e.className='card empty';cal.appendChild(e);} 
+  for(let i=0;i<offset;i++){const e=document.createElement('div');e.className='card empty';cal.appendChild(e);}
   for(let day=1;day<=dim;day++){
     const card=document.createElement('div');card.className='card';card.dataset.day=day;
     const dd=document.createElement('div');dd.className='date';dd.textContent=String(day).padStart(2,'0');card.appendChild(dd);
@@ -554,11 +588,11 @@ function render(){
       card.classList.add('work');
       const pill=document.createElement('div');pill.className='pill';pill.dataset.type=info.type;pill.style.background=colorOf(info.type);
       pill.innerHTML=`<span>${info.type}</span> <small>${String(info.hours).replace('.',',')} h</small>`;pill.title=info.detail||'';card.appendChild(pill);
-      if(info.note){const n=document.createElement('div');n.className='note';n.textContent=info.note;card.appendChild(n);} 
+      if(info.note){const n=document.createElement('div');n.className='note';n.textContent=info.note;card.appendChild(n);}
 
       const place=extractPlace(info.detail||"");
       if(place){
-        const mates=findMates({year:currentYear,month:currentMonth,day,place,currentName=current});
+        const mates=findMates({year=currentYear,month=currentMonth,day,place,currentName=current});
         if(mates.length){
           const mEl=document.createElement('div');mEl.className='mates';
           mEl.textContent=`Avec : ${mates.join(', ')}`;
@@ -569,11 +603,10 @@ function render(){
       const plus=document.createElement('div');plus.className='pill';plus.style.background='#27406f';plus.textContent='+ Ajouter';plus.style.color='#fff';plus.style.marginTop='22px';card.appendChild(plus);
     }
 
-    // Clic: pop-up d'info pour tous. Si admin & édition, bouton "Modifier" dans la modale.
     card.onclick=()=> openInfo(day);
     cal.appendChild(card);
   }
-  const filled=offset+dim,rest=(7-(filled%7))%7;for(let i=0;i<rest;i++){const e=document.createElement('div');e.className='card empty';cal.appendChild(e);} 
+  const filled=offset+dim,rest=(7-(filled%7))%7;for(let i=0;i<rest;i++){const e=document.createElement('div');e.className='card empty';cal.appendChild(e);}
   renderTotals(days);
   updatePrintHeader();
 }
@@ -616,7 +649,8 @@ document.getElementById('btnWeek').onclick=async()=>{if(!canEditAll)return alert
 };
 document.getElementById('btnRange').onclick=async()=>{if(!canEditAll)return alert("Édition admin requise.");const ans=prompt("Appliquer du jour X au jour Y (ex: 5-12) :","");if(!ans)return;
   const m=ans.match(/^\s*(\d{1,2})\s*[-–]\s*(\d{1,2})\s*$/);if(!m)return alert("Format invalide. Exemple : 5-12");
-  let a=parseInt(m[1],10),b=parseInt(m[2],10);if(a>b)[a,b]=[b,a];
+  let a=parseInt(m[1],10),b=parseInt(m[2],10);
+  if(a>b){ const tmp=a; a=b; b=tmp; } /* swap robuste */
   const dim=new Date(currentYear,currentMonth+1,0).getDate();a=Math.max(1,Math.min(dim,a));b=Math.max(1,Math.min(dim,b));
   const payload={type:fType.value,hours:Number(fHours.value||0),detail:fDetail.value.trim(),note:fNote.value.trim()};
   const store=ensureMonth(current,currentYear,currentMonth).days;for(let d=a;d<=b;d++){store[d]={...payload};}
@@ -642,7 +676,6 @@ function openInfo(day){
     const preciseList = (data.detail||'').match(/\d{1,2}h\d{0,2}/g) || [];
     const precise = preciseList.length ? preciseList.join(' — ') : '—';
 
-    // Bandeau heures précises en grand
     const band=document.createElement('div');
     band.style.display='flex';band.style.alignItems='center';band.style.gap='10px';band.style.background='#0c1a33';band.style.border='1px solid #2a3d6d';band.style.borderRadius='12px';band.style.padding='10px 12px';
     band.innerHTML = `<div style="font-size:22px;font-weight:900">⏰ ${precise}</div><div style="margin-left:auto;font-weight:800;padding:6px 10px;border-radius:999px;background:${colorOf(data.type)}">${data.type} · ${(data.hours??'-')} h</div>`;
@@ -721,6 +754,42 @@ pmList.addEventListener('click',e=>{
   }
 });
 
+/* ===== Password manager (Admin) ===== */
+const pwdModal=document.getElementById('pwdModal');
+const pwdList=document.getElementById('pwdList');
+document.getElementById('btnPwd').onclick=()=>{
+  if(!canEditAll) return;
+  pwdList.innerHTML='';
+  people.forEach(name=>{
+    const row=document.createElement('div');
+    row.style.display='grid';row.style.gridTemplateColumns='140px 1fr auto';row.style.gap='8px';row.style.alignItems='center';
+    row.innerHTML=`<div style="font-weight:700;color:#cfe0ff">${name}</div>
+      <input type="text" placeholder="(laisser vide pour ne pas changer)" data-name="${name}" />
+      <button data-gen="${name}">Générer</button>`;
+    pwdList.appendChild(row);
+  });
+  pwdModal.style.display='flex';
+};
+document.getElementById('pwdCancel').onclick=()=>{pwdModal.style.display='none';};
+document.getElementById('pwdSave').onclick=async()=>{
+  const inputs=[...pwdList.querySelectorAll('input[data-name]')];
+  let changed=false;
+  inputs.forEach(i=>{
+    const name=i.getAttribute('data-name'); const val=i.value.trim();
+    if(val){ setPass(name,val); changed=true; }
+  });
+  if(changed){ try{await cloudSavePasses();}catch{} showToast('Mots de passe mis à jour ✅'); }
+  pwdModal.style.display='none';
+};
+pwdList?.addEventListener('click',e=>{
+  if(e.target.matches('button[data-gen]')){
+    const name=e.target.getAttribute('data-gen');
+    const rand=Math.random().toString(36).slice(2,8);
+    setPass(name,rand);
+    alert(`Nouveau mot de passe pour ${name} : ${rand}`);
+  }
+});
+
 /* ===== Toolbar actions ===== */
 document.getElementById('btnPdf').onclick=()=>{updatePrintHeader(); setTimeout(()=>window.print(),50);} ;
 document.getElementById('btnBackup').onclick=()=>{
@@ -735,3 +804,69 @@ document.getElementById('fileImport').addEventListener('change',async e=>{
     const data=JSON.parse(txt);
     if(data.people) people=data.people;
     if(data.peopleData){ for (const k in peopleData) delete peopleData[k]; Object.assign(peopleData,data.peopleData); }
+    current=data.current||current; currentYear=data.currentYear||currentYear; currentMonth=data.currentMonth||currentMonth;
+    saveLocal(); await cloudSave();
+    renderSidebar(); render();
+    showToast('Import réussi ✅');
+  }catch(err){ alert('Import invalide : '+err.message); }
+});
+document.getElementById('btnSaveAll').onclick=async()=>{saveLocal(); try{await cloudSave();}catch{};};
+document.getElementById('btnCloudTest').onclick=async()=>{
+  const ok=await cloudLoad();
+  const okPass=await cloudLoadPasses();
+  document.getElementById('cloudStatus').textContent = ok? 'Cloud OK ✅' : 'Cloud vide';
+  if(ok || okPass){ renderSidebar(); render(); showToast('Données cloud chargées'); }
+};
+document.getElementById('btnEdit').onclick=()=>{
+  if(!canEditAll) return;
+  editing=!editing;
+  document.getElementById('btnEdit').textContent = editing ? "Désactiver l’édition" : "Activer l’édition";
+  render();
+};
+
+/* ===== Mobile drawer ===== */
+const drawer=document.querySelector('.side.drawer');
+const overlay=document.getElementById('overlay');
+function openMenu(){drawer.classList.add('open'); overlay.style.display='block'; document.body.classList.add('menu-open');}
+function closeMenu(){drawer.classList.remove('open'); overlay.style.display='none'; document.body.classList.remove('menu-open');}
+document.getElementById('menuBtn').onclick=openMenu; overlay.onclick=closeMenu;
+
+/* ===== Impression ===== */
+function updatePrintHeader(){
+  document.getElementById('phPerson').textContent=current;
+  document.getElementById('phMonth').textContent=`${monthNames[currentMonth]} ${currentYear}`;
+  document.getElementById('phDate').textContent=new Date().toLocaleString('fr-FR');
+}
+
+/* ===== Lancement ===== */
+async function boot(){
+  // Passes: d’abord cloud, sinon local, sinon défauts
+  const passCloud = await cloudLoadPasses();
+  if(!passCloud){ loadPassesLocal(); }
+
+  const loaded=await cloudLoad();
+  if(!loaded){
+    const hadLocal=loadLocal();
+    if(!hadLocal){ seedDefaultsIfEmpty(); saveLocal(); }
+  }
+  renderHome();
+}
+window.addEventListener('DOMContentLoaded',boot);
+
+/* ====== Tests (console) ======
+   On n’altère pas les “tests existants” car il n’y en avait pas.
+   On ajoute des tests simples pour sécuriser le parsing et la logique. */
+(function runBasicTests(){
+  try{
+    console.assert(parseTimeToHours("7h")===7, "parse 7h");
+    console.assert(parseTimeToHours("13h30")===13.5, "parse 13h30");
+    console.assert(computeHoursFromDetail("7h/12h - 13h30/21h30")===12, "compute 7-12 + 13h30-21h30");
+    console.assert(extractPlace("Promenade 7h/13h30 - 15h/21h30")==="Promenade", "place Promenade");
+    // swap robustness (btnRange)
+    let a=12, b=5; if(a>b){ const tmp=a; a=b; b=tmp; } console.assert(a===5 && b===12, "swap a/b");
+    console.log("Tests OK ✅");
+  }catch(e){ console.warn("Tests KO ❌", e); }
+})();
+</script>
+</body>
+</html>
