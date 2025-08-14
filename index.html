@@ -48,7 +48,7 @@
 
   .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
   .dow{font-size:12px;color:#9aa3b2;text-transform:uppercase;letter-spacing:.06em;text-align:center}
-  .card{background:linear-gradient(180deg,#0f172a,#0c1426);border:1px solid #202b48;border-radius:16px;padding:10px;min-height:112px;position:relative;box-shadow:var(--shadow);transition:transform .08s ease}
+  .card{background:linear-gradient(180deg,#0f172a,#0c1426);border:1px solid #202b48;border-radius:16px;padding:10px;min-height:120px;position:relative;box-shadow:var(--shadow);transition:transform .08s ease}
   .card:hover{transform:translateY(-1px)}
   .date{position:absolute;top:8px;left:10px;font-weight:900;font-size:13px;color:#94a3b8}
   .pill{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:7px 11px;border-radius:999px;font-weight:900;margin-top:8px;width:max-content;color:#fff;border:none}
@@ -57,6 +57,7 @@
   .pill.place{background:#27406f}
   .note{font-size:12px;color:#a78bfa;margin-top:6px}
   .mates{font-size:12px;color:#94a3b8;margin-top:6px}
+  .times{font-size:12px;color:#cbd5e1;margin-top:6px}
   .empty{opacity:.25}
 
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
@@ -78,7 +79,7 @@
     #menuBtn{display:inline-block}
     .wrap{padding:0 10px}
     .calendar{grid-template-columns:repeat(2,1fr);gap:8px}
-    .card{min-height:108px;padding:10px}
+    .card{min-height:116px;padding:10px}
     .pill{padding:8px 12px;font-size:14px}
     h1{font-size:18px}
   }
@@ -120,6 +121,7 @@
     .pill.place{ background:#eef2ff !important; }
     .note  { color:#444 !important; font-size:11px !important; margin-top:4px !important; }
     .mates { color:#333 !important; font-size:11px !important; margin-top:4px !important; }
+    .times { color:#222 !important; font-size:11px !important; margin-top:4px !important; }
     .totals { display:flex; justify-content:flex-end; gap:6px; margin:4px 0 8px 0 !important; }
     .box { background:#fff !important; border:1px solid #d9dee8 !important; box-shadow:none !important; padding:6px 8px !important; border-radius:8px !important; }
     .box h3 { font-size:10px !important; color:#555 !important; margin:0 0 2px !important; }
@@ -247,10 +249,14 @@
   </div>
 </div>
 
-<!-- Choix du mois -->
+<!-- Choix du mois + navigation année -->
 <div class="modal-back" id="mpb">
   <div class="modal" role="dialog" aria-modal="true">
-    <h3>Choisir un mois — <span id="curYear"></span></h3>
+    <h3 style="display:flex;align-items:center;gap:10px;justify-content:space-between">
+      <button id="yearPrev" title="Année précédente">◀</button>
+      <span style="flex:1;text-align:center">Choisir un mois — <span id="curYear"></span></span>
+      <button id="yearNext" title="Année suivante">▶</button>
+    </h3>
     <div id="monthGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
     <div class="actions"><button id="mpClose">Fermer</button></div>
   </div>
@@ -369,7 +375,7 @@ function aggregateDay(year, month, day){
 // ====== LOCALSTORAGE ======
 var STORAGE_KEY='planning_simple_v1';
 function saveLocal(){ var data={people:people,peopleData:peopleData,current:current,currentYear:currentYear,currentMonth:currentMonth}; try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }catch(e){ console.warn('localStorage save failed', e); } }
-function loadLocal(){ try{ var s=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null'); if(!s) return false; people=s.people||people; Object.assign(peopleData, s.peopleData||{}); // On force quand même l'arrivée sur Momo
+function loadLocal(){ try{ var s=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null'); if(!s) return false; people=s.people||people; Object.assign(peopleData, s.peopleData||{}); // On force l'arrivée sur Momo
  current='Momo'; currentYear=s.currentYear||currentYear; currentMonth=s.currentMonth||currentMonth; return true; }catch(e){ return false; } }
 
 // ====== RENDER ======
@@ -447,6 +453,9 @@ function render(){
       pill.innerHTML='<span>'+labelType+'</span> <small>'+String(info.hours).replace('.',',')+' h</small>';
       pill.title=info.detail||'';
       card.appendChild(pill);
+      // ▼ Horaires précis sous la pastille
+      var preciseStr = formatIntervals(info.detail||'');
+      if(preciseStr){ var t=document.createElement('div'); t.className='times'; t.textContent=preciseStr; card.appendChild(t); }
       if(info.note){ var n=document.createElement('div'); n.className='note'; n.textContent=info.note; card.appendChild(n); }
       var place=extractPlace(info.detail||'');
       if(place){
@@ -488,7 +497,7 @@ function findConflicts(params){
   var place = extractPlace(detail||'');
   if(!place) return null; // pas de lieu => pas de blocage
   var newStart = firstStart(detail||'');
-  if(newStart==null) return null; // pas d'horaires parsables => pas de blocage
+  if(newStart==null) return null; // pas d’horaires parsables => pas de blocage
   for(var i=0;i<people.length;i++){
     var other = people[i];
     if(other===name) continue;
@@ -579,10 +588,33 @@ if(infoClose){ infoClose.onclick=function(){ infoBack.style.display='none'; info
 if(infoBack){ infoBack.addEventListener('click',function(e){ if(e.target===infoBack){ infoBack.style.display='none'; infoDay=null; } }); }
 if(infoEdit){ infoEdit.onclick=function(){ if(infoDay!=null && !isGeneral()){ infoBack.style.display='none'; openEditor(infoDay); } }; }
 
-// ====== Mois ======
+// ====== Mois + navigation d'année ======
 var mpb=document.getElementById('mpb'), monthGrid=document.getElementById('monthGrid'), curYearEl=document.getElementById('curYear');
+var yearPrev=document.getElementById('yearPrev'), yearNext=document.getElementById('yearNext');
 var monthLabelEl=document.getElementById('monthLabel');
-if(monthLabelEl){ monthLabelEl.onclick=function(){ curYearEl.textContent=currentYear; monthGrid.innerHTML=''; monthNames.forEach(function(n,i){ var b=document.createElement('button'); b.textContent=n[0].toUpperCase()+n.slice(1); b.onclick=function(){ currentMonth=i; mpb.style.display='none'; saveLocal(); render(); }; monthGrid.appendChild(b); }); mpb.style.display='flex'; }; }
+var curYearShown=currentYear; // Année visible dans le sélecteur (indépendante jusqu'à validation)
+
+function buildMonthGrid(){
+  if(!monthGrid||!curYearEl) return;
+  curYearEl.textContent=curYearShown;
+  monthGrid.innerHTML='';
+  monthNames.forEach(function(n,i){
+    var b=document.createElement('button');
+    b.textContent=n[0].toUpperCase()+n.slice(1);
+    b.onclick=function(){
+      currentYear=curYearShown; // on valide l'année choisie
+      currentMonth=i;
+      mpb.style.display='none';
+      saveLocal();
+      render();
+    };
+    monthGrid.appendChild(b);
+  });
+}
+
+if(monthLabelEl){ monthLabelEl.onclick=function(){ curYearShown=currentYear; buildMonthGrid(); mpb.style.display='flex'; }; }
+if(yearPrev){ yearPrev.onclick=function(){ curYearShown--; buildMonthGrid(); }; }
+if(yearNext){ yearNext.onclick=function(){ curYearShown++; buildMonthGrid(); }; }
 var mpClose=document.getElementById('mpClose'); if(mpClose){ mpClose.onclick=function(){ mpb.style.display='none'; }; }
 if(mpb){ mpb.addEventListener('click',function(e){ if(e.target===mpb){ mpb.style.display='none'; } }); }
 
@@ -610,8 +642,18 @@ var btnReset=document.getElementById('btnReset');
 if(btnReset){ btnReset.onclick=function(){
   var ok=confirm('⚠️ Cette action est irréversible. Voulez-vous vraiment TOUT effacer (plannings et noms) ?');
   if(!ok) return;
-  try{ localStorage.removeItem(STORAGE_KEY); }catch(_){}}
-}
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(_){ }
+  var DEFAULT_PEOPLE=['Momo','Lucas','Sabri','Sofiane','Hamid','Adama','Iddir','Karim','Azeddine'];
+  people=DEFAULT_PEOPLE.slice();
+  peopleData={};
+  current='Momo';
+  editing=false;
+  renderSidebar();
+  var g=document.getElementById('btnGeneral'); if(g) g.classList.remove('active');
+  render();
+  showToast('Données effacées');
+  setTimeout(function(){ location.reload(); }, 120);
+}; }
 
 // ====== Tests rapides
 (function runDevTests(){
