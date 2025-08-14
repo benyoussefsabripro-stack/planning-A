@@ -22,22 +22,6 @@
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
 
-  /* ===== Accueil ===== */
-  #home{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--grad);padding:24px}
-  .home-card{width:100%;max-width:860px;background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:22px}
-  .home-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
-  .home-title{font-weight:900;font-size:20px;color:#cfe0ff}
-  .home-sub{color:var(--muted);margin:6px 0 14px}
-  .btn{background:#13213d;border:1px solid #2a3d6d;color:#e5e7eb;border-radius:12px;padding:10px 12px;font-weight:800;cursor:pointer;box-shadow:var(--shadow)}
-  .btn:hover{background:#142a57}
-  .team-tile{margin:6px 0 14px;background:#0e1b33;border:1px solid #253a6b;padding:16px;border-radius:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;box-shadow:var(--shadow)}
-  .team-tile:hover{background:#11244a}
-  .home-grid{display:grid;gap:12px;grid-template-columns:repeat(2,1fr)}
-  @media(min-width:720px){.home-grid{grid-template-columns:repeat(4,1fr)}}
-  .person-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:transform .12s}
-  .person-card:hover{transform:translateY(-1px);background:var(--sidebar-hover)}
-  .avatar{width:64px;height:64px;border-radius:50%;border:2px solid var(--border);background:#17345f;display:flex;align-items:center;justify-content:center;font-weight:900}
-
   /* ===== App ===== */
   .app{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
   .side{background:var(--sidebar);border-right:1px solid var(--sidebar-border);padding:16px 12px}
