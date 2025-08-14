@@ -343,6 +343,7 @@ function intervals(detail){
   return out;
 }
 function overlaps(a,b){ return a[0] < b[1] && b[0] < a[1]; }
+function firstStart(detail){ var ints=intervals(detail||''); return ints.length? ints[0][0] : null; }
 
 // Agrégation pour la vue générale (avec horaires par personne)
 function aggregateDay(year, month, day){
@@ -479,13 +480,15 @@ function updatePrintHeader(){ var phPerson=document.getElementById('phPerson'); 
 
 function updateEditBadge(){ var b=document.getElementById('editBadge'); if(!b) return; b.style.display = (editing && !isGeneral()) ? 'block' : 'none'; }
 
-// ====== VÉRIF CONFLITS (lieu + chevauchement horaires) ======
+// ====== VÉRIF CONFLITS — RÈGLE "MÊME DÉBUT DE JOURNÉE" ======
+// On bloque uniquement si deux personnes sont sur le *même site* ET
+// que leur premier horaire de la journée commence exactement à la même heure.
 function findConflicts(params){
   var name = params.name, year=params.year, month=params.month, day=params.day, detail=params.detail;
   var place = extractPlace(detail||'');
-  if(!place) return null;
-  var newIntervals = intervals(detail||'');
-  if(!newIntervals.length) return null; // si pas d’horaires, on laisse passer
+  if(!place) return null; // pas de lieu => pas de blocage
+  var newStart = firstStart(detail||'');
+  if(newStart==null) return null; // pas d'horaires parsables => pas de blocage
   for(var i=0;i<people.length;i++){
     var other = people[i];
     if(other===name) continue;
@@ -494,13 +497,9 @@ function findConflicts(params){
     if(!info) continue;
     var p2=extractPlace(info.detail||'');
     if(!p2 || p2.toLowerCase()!==place.toLowerCase()) continue;
-    var ints2 = intervals(info.detail||'');
-    for(var a=0;a<newIntervals.length;a++){
-      for(var b=0;b<ints2.length;b++){
-        if(overlaps(newIntervals[a],ints2[b])){
-          return {with: other, place: place};
-        }
-      }
+    var otherStart = firstStart(info.detail||'');
+    if(otherStart!=null && otherStart===newStart){
+      return {with: other, place: place, time:newStart};
     }
   }
   return null;
@@ -520,7 +519,7 @@ var btnSave=document.getElementById('btnSave'); if(btnSave) btnSave.onclick=func
   var detail = (fDetail.value||'').trim();
   var conflict = findConflicts({name:current, year:currentYear, month:currentMonth, day:editDay, detail:detail});
   if(conflict){
-    alert('⛔ Conflit: '+conflict.with+' est déjà à '+conflict.place+' sur des horaires qui se chevauchent. Modifie les heures ou le lieu.');
+    alert('⛔ Conflit: '+conflict.with+' est déjà à '+conflict.place+' avec le même début ('+String(conflict.time).replace('.',',')+'h). Modifie l\'heure de début.');
     return;
   }
   ensureMonth(current,currentYear,currentMonth).days[editDay]={type:fType.value,hours:Number(fHours.value||0),detail:detail,note:fNote.value.trim()};
@@ -539,7 +538,7 @@ var btnWeek=document.getElementById('btnWeek'); if(btnWeek) btnWeek.onclick=func
   for(var i=0;i<7;i++){
     var d=mon.getDate()+i; if(d<1||d>dim) continue;
     var c=findConflicts({name:current, year:currentYear, month:currentMonth, day:d, detail:payload.detail});
-    if(c){ alert('⛔ Conflit le '+String(d).padStart(2,'0')+'/'+String(currentMonth+1).padStart(2,'0')+': '+c.with+' est déjà à '+c.place+' sur des horaires qui se chevauchent.'); return; }
+    if(c){ alert('⛔ Conflit le '+String(d).padStart(2,'0')+'/'+String(currentMonth+1).padStart(2,'0')+': '+c.with+' commence à la même heure ('+String(c.time).replace('.',',')+'h) à '+c.place+'.'); return; }
   }
   var store=ensureMonth(current,currentYear,currentMonth).days;
   for(var i2=0;i2<7;i2++){
@@ -561,7 +560,7 @@ var btnRange=document.getElementById('btnRange'); if(btnRange) btnRange.onclick=
   var payload={type:fType.value,hours:Number(fHours.value||0),detail:(fDetail.value||'').trim(),note:fNote.value.trim()};
   for(var d=a; d<=b; d++){
     var c=findConflicts({name:current, year:currentYear, month:currentMonth, day:d, detail:payload.detail});
-    if(c){ alert('⛔ Conflit le '+String(d).padStart(2,'0')+'/'+String(currentMonth+1).padStart(2,'0')+': '+c.with+' est déjà à '+c.place+' sur des horaires qui se chevauchent.'); return; }
+    if(c){ alert('⛔ Conflit le '+String(d).padStart(2,'0')+'/'+String(currentMonth+1).padStart(2,'0')+': '+c.with+' commence à la même heure ('+String(c.time).replace('.',',')+'h) à '+c.place+'.'); return; }
   }
   var store=ensureMonth(current,currentYear,currentMonth).days;
   for(var d2=a; d2<=b; d2++){ store[d2]=Object.assign({},payload); }
@@ -611,19 +610,8 @@ var btnReset=document.getElementById('btnReset');
 if(btnReset){ btnReset.onclick=function(){
   var ok=confirm('⚠️ Cette action est irréversible. Voulez-vous vraiment TOUT effacer (plannings et noms) ?');
   if(!ok) return;
-  try{ localStorage.removeItem(STORAGE_KEY); }catch(_){}
-  try{ localStorage.removeItem('planning_v1'); localStorage.removeItem('planning_simple'); }catch(_){}
-  var DEFAULT_PEOPLE=['Momo','Lucas','Sabri','Sofiane','Hamid','Adama','Iddir','Karim','Azeddine'];
-  people=DEFAULT_PEOPLE.slice();
-  peopleData={};
-  current='Momo';
-  editing=false;
-  renderSidebar();
-  var g=document.getElementById('btnGeneral'); if(g) g.classList.remove('active');
-  render();
-  showToast('Données effacées');
-  setTimeout(function(){ location.reload(); }, 120);
-}; }
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(_){}}
+}
 
 // ====== Tests rapides
 (function runDevTests(){
@@ -633,6 +621,8 @@ if(btnReset){ btnReset.onclick=function(){
     console.assert(parseTimeToHours('13h30')===13.5,'parse 13h30');
     console.assert(computeHoursFromDetail('7h/12h - 13h30/21h30')===13,'hours 13');
     var ints=intervals('7h/12h - 13h30/21h30'); console.assert(ints.length===2 && ints[0][0]===7 && ints[0][1]===12,'intervals ok');
+    console.assert(firstStart('Promenade 7h/13h30 - 15h/21h30')===7,'firstStart am');
+    console.assert(firstStart('Promenade 9h/15h - 16h30/21h30')===9,'firstStart pm');
     console.info('[Tests] ok');
   }catch(e){ console.warn('[Tests] fail',e); }
 })();
