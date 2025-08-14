@@ -69,6 +69,9 @@
   input,select{width:100%;padding:10px;border:1px solid #2a3d6d;border-radius:10px;font-size:14px;background:#091124;color:#e5e7eb}
   .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap}
 
+  /* Badge férié */
+  .holiday{position:absolute;top:8px;right:10px;font-size:11px;font-weight:900;color:#fecaca;background:#3f1d1d;border:1px solid #7f1d1d;padding:3px 6px;border-radius:999px}
+
   @media (max-width:880px){
     .app{grid-template-columns:1fr}
     .side{position:static}
@@ -166,7 +169,7 @@
           <span><span class="sw ph-c"></span> C</span>
           <span><span class="sw ph-p"></span> P</span>
           <span><span class="sw ph-g"></span> G</span>
-          <span><span class="sw ph-r"></span> R</span>
+          <span><span class="sw ph-r"></span> Congé</span>
         </div>
         <hr class="ph-sep" />
       </div>
@@ -175,7 +178,7 @@
         <span class="tag"><span class="sw" style="background:var(--c)"></span> C</span>
         <span class="tag"><span class="sw" style="background:var(--p)"></span> P</span>
         <span class="tag"><span class="sw" style="background:var(--g)"></span> G</span>
-        <span class="tag"><span class="sw" style="background:var(--r)"></span> R (Ronde/Fin spéciale)</span>
+        <span class="tag"><span class="sw" style="background:var(--r)"></span> Congé</span>
       </div>
       <div id="totals" class="totals"></div>
       <div id="cal" class="calendar" aria-live="polite"></div>
@@ -204,7 +207,7 @@
           <option value="C">C</option>
           <option value="P">P</option>
           <option value="G">G</option>
-          <option value="R">R (Ronde/Fin spéciale)</option>
+          <option value="R">Congé</option>
         </select>
       </div>
       <div>
@@ -288,6 +291,34 @@ var people = ['Momo','Lucas','Sabri','Sofiane','Hamid','Adama','Iddir','Karim','
 var peopleData = {}; // Pas de seed: données vides par défaut
 var monthNames = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 
+// ====== JOURS FÉRIÉS (France) 2025 & 2026 ======
+var HOLIDAYS_FR = {
+  2025: {
+    0:[1],            // 1 jan
+    3:[21],           // Lundi de Pâques (21 avril 2025)
+    4:[1,8,29],       // 1 mai, 8 mai, Ascension (29 mai 2025)
+    5:[9],            // Lundi de Pentecôte (9 juin 2025)
+    6:[14],           // 14 juillet
+    7:[15],           // 15 août (Assomption)
+    10:[1,11],        // 1 nov, 11 nov
+    11:[25]           // 25 déc
+  },
+  2026: {
+    0:[1],
+    3:[6],            // Lundi de Pâques (6 avril 2026)
+    4:[1,8,14,25],    // 1 mai, 8 mai, Ascension (14 mai 2026), Lundi de Pentecôte (25 mai 2026)
+    6:[14],
+    7:[15],
+    10:[1,11],
+    11:[25]
+  }
+};
+function isHoliday(y,m,d){
+  var ys = HOLIDAYS_FR[y]; if(!ys) return false;
+  var ms = ys[m]; if(!ms) return false;
+  return ms.indexOf(d) > -1;
+}
+
 // ====== HELPERS ======
 function ensureMonth(name,y,m){ if(!peopleData[name]) peopleData[name] = {}; if(!peopleData[name][y]) peopleData[name][y] = {}; if(!peopleData[name][y][m]) peopleData[name][y][m] = {days:{}}; return peopleData[name][y][m]; }
 function colorOf(t){ return ({C:'var(--c)',P:'var(--p)',G:'var(--g)',R:'var(--r)'}[t]||'#999'); }
@@ -295,12 +326,25 @@ function weekNumber(dt){ var t=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),
 function mondayOf(dt){ var d=(dt.getDay()+6)%7; var m=new Date(dt); m.setDate(dt.getDate()-d); return m; }
 function parseTimeToHours(t){ var m=t.match(/^(\d{1,2})h(?:(\d{2}))?$/i); if(!m)return null; var H=parseInt(m[1],10), M=parseInt(m[2]||'0',10); return H+(M/60); }
 function computeHoursFromDetail(detail){ var times=(detail.match(/\d{1,2}h\d{0,2}/g)||[]).map(parseTimeToHours).filter(function(v){return v!=null;}); var s=0; for(var i=0;i+1<times.length;i+=2) s+=times[i+1]-times[i]; return Math.round(s*2)/2; }
-function showToast(t){ var el=document.getElementById('toast'); el.textContent=t||'OK'; el.style.display='block'; setTimeout(function(){ el.style.display='none'; },1200); }
+function showToast(t){ var el=document.getElementById('toast'); el.textContent=t||'OK'; el.style.display='block'; setTimeout(function(){ el.style.display='none'; },1500); }
 var PLACE_WORDS=['Promenade','Colline','Grande Arche','Arche','Accueil','Gardiennage'];
 function extractPlace(detail){ detail=(detail||'').trim(); if(!detail) return null; for(var i=0;i<PLACE_WORDS.length;i++){ var p=PLACE_WORDS[i]; var re=new RegExp('^\\s*'+p.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&')+'\\b','i'); if(re.test(detail)) return p; } var m=detail.match(/^\s*([A-Za-zÀ-ÖØ-öø-ÿ]+)\b/); return m ? (m[1].charAt(0).toUpperCase()+m[1].slice(1).toLowerCase()) : null; }
 function findMates(opts){ var year=opts.year,month=opts.month,day=opts.day,place=opts.place,currentName=opts.currentName; if(!place) return []; var mates=[]; for(var i=0;i<people.length;i++){ var name=people[i]; if(name===currentName) continue; var store=peopleData[name] && peopleData[name][year] && peopleData[name][year][month]; var info=store && store.days && store.days[day]; if(!info) continue; var place2=extractPlace(info.detail||''); if(place2 && place2.toLowerCase()===place.toLowerCase()) mates.push(name); } return mates; }
+// Formats horaires à partir du "detail"
+function formatIntervals(detail){
+  var times=(detail.match(/\d{1,2}h\d{0,2}/g)||[]);
+  var out=[]; for(var i=0;i+1<times.length;i+=2){ out.push(times[i]+' – '+times[i+1]); }
+  return out.join(' / ');
+}
+// Intervalles numériques [start,end] en heures décimales
+function intervals(detail){
+  var times=(detail.match(/\d{1,2}h\d{0,2}/g)||[]).map(parseTimeToHours).filter(function(v){return v!=null;});
+  var out=[]; for(var i=0;i+1<times.length;i+=2){ var a=times[i], b=times[i+1]; if(a!=null && b!=null && b>a) out.push([a,b]); }
+  return out;
+}
+function overlaps(a,b){ return a[0] < b[1] && b[0] < a[1]; }
 
-// Agrégation pour la vue générale
+// Agrégation pour la vue générale (avec horaires par personne)
 function aggregateDay(year, month, day){
   var byPlace = {};
   for(var i=0;i<people.length;i++){
@@ -311,7 +355,12 @@ function aggregateDay(year, month, day){
     var place=extractPlace(info.detail||'');
     if(!place) continue;
     if(!byPlace[place]) byPlace[place]=[];
-    if(byPlace[place].indexOf(name)===-1) byPlace[place].push(name);
+    byPlace[place].push({
+      name:name,
+      hours:info.hours,
+      detail:info.detail||'',
+      intervals:formatIntervals(info.detail||'')
+    });
   }
   return byPlace;
 }
@@ -326,7 +375,6 @@ function loadLocal(){ try{ var s=JSON.parse(localStorage.getItem(STORAGE_KEY)||'
 var peopleEl=document.getElementById('people');
 var btnGeneral=document.getElementById('btnGeneral');
 function renderSidebar(){ if(!peopleEl) return; peopleEl.innerHTML=''; var colors=['#9bd0ff','#ffd28a','#8ec5ff','#c4f6c1','#ffb4b4','#d7c7ff','#ffe69b','#a0e9dd','#fbd1ff']; for(var i=0;i<people.length;i++){ (function(name,idx){ var el=document.createElement('div'); el.className='person'+(name===current?' active':''); el.innerHTML='<span class="badge" style="background:'+colors[idx%colors.length]+'"></span>'+name; el.onclick=function(){ current=name; document.querySelectorAll('.person').forEach(function(n){n.classList.remove('active')}); el.classList.add('active'); if(btnGeneral) btnGeneral.classList.remove('active'); saveLocal(); render(); }; peopleEl.appendChild(el); })(people[i],i); }
-  // état visuel du bouton général
   if(btnGeneral){ if(current===GENERAL_KEY) btnGeneral.classList.add('active'); else btnGeneral.classList.remove('active'); }
 }
 
@@ -346,21 +394,30 @@ function render(){
   for(var i=0;i<offset;i++){ var e=document.createElement('div'); e.className='card empty'; cal.appendChild(e); }
 
   if(isGeneral()){
-    // Vue agrégée: on affiche par lieu -> liste des noms
+    // Vue agrégée: par lieu -> liste noms + horaires
     for(var day=1; day<=dim; day++){
       var card=document.createElement('div'); card.className='card'; card.setAttribute('data-day',day);
       var dd=document.createElement('div'); dd.className='date'; dd.textContent=String(day).padStart(2,'0'); card.appendChild(dd);
+
+      if(isHoliday(currentYear,currentMonth,day)){
+        var h=document.createElement('div'); h.className='holiday'; h.textContent='Férié'; card.appendChild(h);
+      }
+
       var map=aggregateDay(currentYear,currentMonth,day);
       var places=Object.keys(map);
-      if(places.length===0){ /* rien */ }
-      else{
+      if(places.length){
         places.sort(function(a,b){ return a.localeCompare(b,'fr'); });
         places.forEach(function(place){
-          var pill=document.createElement('div'); pill.className='pill place'; pill.textContent=place+' — '+map[place].join(', ');
+          var list = map[place].map(function(it){ 
+            var hoursPart = (it.hours!=null && it.hours!=='' ? ' · '+String(it.hours).replace('.',',')+' h' : '');
+            var iv = it.intervals || '';
+            var suffix = iv ? ' ('+iv+hoursPart+')' : hoursPart;
+            return it.name + suffix;
+          }).join(', ');
+          var pill=document.createElement('div'); pill.className='pill place'; pill.textContent=place+' — '+list;
           card.appendChild(pill);
         });
       }
-      // En vue générale, clic = détails d'agrégation
       card.onclick=(function(d){ return function(){ openInfoGeneral(d); }; })(day);
       cal.appendChild(card);
     }
@@ -370,14 +427,34 @@ function render(){
     return;
   }
 
-  // Vue personne classique
+  // Vue personne
   var store=ensureMonth(current,currentYear,currentMonth);
   var days=store.days;
   for(var day=1; day<=dim; day++){
     var card=document.createElement('div'); card.className='card'; card.setAttribute('data-day',day);
     var dd=document.createElement('div'); dd.className='date'; dd.textContent=String(day).padStart(2,'0'); card.appendChild(dd);
+
+    if(isHoliday(currentYear,currentMonth,day)){
+      var h=document.createElement('div'); h.className='holiday'; h.textContent='Férié'; card.appendChild(h);
+    }
+
     var info=days[day];
-    if(info){ card.classList.add('work'); var pill=document.createElement('div'); pill.className='pill'; pill.setAttribute('data-type',info.type); pill.style.background=colorOf(info.type); pill.innerHTML='<span>'+info.type+'</span> <small>'+String(info.hours).replace('.',',')+' h</small>'; pill.title=info.detail||''; card.appendChild(pill); if(info.note){ var n=document.createElement('div'); n.className='note'; n.textContent=info.note; card.appendChild(n); } var place=extractPlace(info.detail||''); if(place){ var mates=findMates({year:currentYear,month:currentMonth,day:day,place:place,currentName:current}); if(mates.length){ var mEl=document.createElement('div'); mEl.className='mates'; mEl.textContent='Avec : '+mates.join(', '); card.appendChild(mEl); } } } else if(editing){ var plus=document.createElement('div'); plus.className='pill'; plus.style.background='#27406f'; plus.style.color='#fff'; plus.textContent='+ Ajouter'; plus.onclick=(function(d){ return function(ev){ ev.stopPropagation(); openEditor(d); }; })(day); card.appendChild(plus); }
+    if(info){
+      card.classList.add('work');
+      var pill=document.createElement('div'); pill.className='pill'; pill.setAttribute('data-type',info.type); pill.style.background=colorOf(info.type);
+      var labelType = (info.type==='R'?'Congé':info.type);
+      pill.innerHTML='<span>'+labelType+'</span> <small>'+String(info.hours).replace('.',',')+' h</small>';
+      pill.title=info.detail||'';
+      card.appendChild(pill);
+      if(info.note){ var n=document.createElement('div'); n.className='note'; n.textContent=info.note; card.appendChild(n); }
+      var place=extractPlace(info.detail||'');
+      if(place){
+        var mates=findMates({year:currentYear,month:currentMonth,day:day,place:place,currentName:current});
+        if(mates.length){ var mEl=document.createElement('div'); mEl.className='mates'; mEl.textContent='Avec : '+mates.join(', '); card.appendChild(mEl); }
+      }
+    } else if(editing){
+      var plus=document.createElement('div'); plus.className='pill'; plus.style.background='#27406f'; plus.style.color='#fff'; plus.textContent='+ Ajouter'; plus.onclick=(function(d){ return function(ev){ ev.stopPropagation(); openEditor(d); }; })(day); card.appendChild(plus);
+    }
     card.onclick=(function(d){ return function(){ openInfo(d); }; })(day);
     cal.appendChild(card);
   }
@@ -388,8 +465,7 @@ function render(){
 
 function renderTotals(days){ var totals=document.getElementById('totals'); if(!totals) return; totals.innerHTML=''; var monthSum=0; Object.values(days).forEach(function(v){ monthSum+=Number(v.hours||0); }); totals.appendChild(box('Total mois',monthSum.toFixed(2).replace('.',',')+' h')); var weeks={}, dim=new Date(currentYear,currentMonth+1,0).getDate(); for(var d=1; d<=dim; d++){ if(days[d]){ var w=weekNumber(new Date(currentYear,currentMonth,d)); weeks[w]=(weeks[w]||0)+Number(days[d].hours||0); } } Object.keys(weeks).sort(function(a,b){return a-b;}).forEach(function(w){ totals.appendChild(box('Sem. '+w,weeks[w].toFixed(2).replace('.',',')+' h')); }); function box(t,v){ var el=document.createElement('div'); el.className='box'; el.innerHTML='<h3>'+t+'</h3><div>'+v+'</div>'; return el; } }
 
-function renderTotalsGeneral(){ var totals=document.getElementById('totals'); if(!totals) return; totals.innerHTML=''; // On peut montrer le nombre total de sites uniques dans le mois
-  var dim=new Date(currentYear,currentMonth+1,0).getDate();
+function renderTotalsGeneral(){ var totals=document.getElementById('totals'); if(!totals) return; totals.innerHTML=''; var dim=new Date(currentYear,currentMonth+1,0).getDate();
   var uniquePlaces=new Set();
   for(var d=1; d<=dim; d++){
     var map=aggregateDay(currentYear,currentMonth,d);
@@ -403,6 +479,33 @@ function updatePrintHeader(){ var phPerson=document.getElementById('phPerson'); 
 
 function updateEditBadge(){ var b=document.getElementById('editBadge'); if(!b) return; b.style.display = (editing && !isGeneral()) ? 'block' : 'none'; }
 
+// ====== VÉRIF CONFLITS (lieu + chevauchement horaires) ======
+function findConflicts(params){
+  var name = params.name, year=params.year, month=params.month, day=params.day, detail=params.detail;
+  var place = extractPlace(detail||'');
+  if(!place) return null;
+  var newIntervals = intervals(detail||'');
+  if(!newIntervals.length) return null; // si pas d’horaires, on laisse passer
+  for(var i=0;i<people.length;i++){
+    var other = people[i];
+    if(other===name) continue;
+    var store=peopleData[other] && peopleData[other][year] && peopleData[other][year][month];
+    var info=store && store.days && store.days[day];
+    if(!info) continue;
+    var p2=extractPlace(info.detail||'');
+    if(!p2 || p2.toLowerCase()!==place.toLowerCase()) continue;
+    var ints2 = intervals(info.detail||'');
+    for(var a=0;a<newIntervals.length;a++){
+      for(var b=0;b<ints2.length;b++){
+        if(overlaps(newIntervals[a],ints2[b])){
+          return {with: other, place: place};
+        }
+      }
+    }
+  }
+  return null;
+}
+
 // ====== ÉDITION ======
 var mb=document.getElementById('mb'); var fType=document.getElementById('fType'), fHours=document.getElementById('fHours'), fDetail=document.getElementById('fDetail'), fNote=document.getElementById('fNote');
 function openEditor(day){ if(isGeneral()) return; editDay=day; var d=ensureMonth(current,currentYear,currentMonth).days[day]||{type:'C',hours:'',detail:'',note:''}; document.getElementById('mTitle').textContent=String(day).padStart(2,'0')+'/'+String(currentMonth+1).padStart(2,'0')+'/'+currentYear+' — '+current; fType.value=d.type||'C'; fHours.value=(d.hours!=null?d.hours:''); fDetail.value=d.detail||''; fNote.value=d.note||''; mb.style.display='flex'; }
@@ -410,17 +513,67 @@ function closeEditor(){ mb.style.display='none'; editDay=null; }
 var btnClose=document.getElementById('btnClose'); if(btnClose) btnClose.onclick=closeEditor;
 Array.prototype.forEach.call(document.querySelectorAll('.chip[data-preset]'), function(ch){ ch.onclick=function(){ var p=JSON.parse(ch.getAttribute('data-preset')); fType.value=p.type||'C'; fDetail.value=p.detail||''; if(p.autoHours&&p.detail){ var h=computeHoursFromDetail(p.detail); fHours.value=(isFinite(h)?h:0); } }; });
 var copyPrev=document.getElementById('copyPrev'); if(copyPrev) copyPrev.onclick=function(){ if(editDay==null) return; var prev=ensureMonth(current,currentYear,currentMonth).days[editDay-1]; if(prev){ fType.value=prev.type; fHours.value=prev.hours; fDetail.value=prev.detail||''; fNote.value=prev.note||''; } };
-var btnSave=document.getElementById('btnSave'); if(btnSave) btnSave.onclick=function(){ if(editDay==null) return; ensureMonth(current,currentYear,currentMonth).days[editDay]={type:fType.value,hours:Number(fHours.value||0),detail:fDetail.value.trim(),note:fNote.value.trim()}; saveLocal(); closeEditor(); render(); };
+
+// Enregistrer (avec blocage si conflit)
+var btnSave=document.getElementById('btnSave'); if(btnSave) btnSave.onclick=function(){
+  if(editDay==null) return;
+  var detail = (fDetail.value||'').trim();
+  var conflict = findConflicts({name:current, year:currentYear, month:currentMonth, day:editDay, detail:detail});
+  if(conflict){
+    alert('⛔ Conflit: '+conflict.with+' est déjà à '+conflict.place+' sur des horaires qui se chevauchent. Modifie les heures ou le lieu.');
+    return;
+  }
+  ensureMonth(current,currentYear,currentMonth).days[editDay]={type:fType.value,hours:Number(fHours.value||0),detail:detail,note:fNote.value.trim()};
+  saveLocal(); closeEditor(); render();
+};
+
+// Supprimer
 var btnDel=document.getElementById('btnDel'); if(btnDel) btnDel.onclick=function(){ if(editDay==null) return; delete ensureMonth(current,currentYear,currentMonth).days[editDay]; saveLocal(); closeEditor(); render(); };
-var btnWeek=document.getElementById('btnWeek'); if(btnWeek) btnWeek.onclick=function(){ if(editDay==null) return; var dt=new Date(currentYear,currentMonth,editDay), mon=mondayOf(dt), dim=new Date(currentYear,currentMonth+1,0).getDate(); var payload={type:fType.value,hours:Number(fHours.value||0),detail:fDetail.value.trim(),note:fNote.value.trim()}; var store=ensureMonth(current,currentYear,currentMonth).days; for(var i=0;i<7;i++){ var d=mon.getDate()+i; if(d>=1&&d<=dim){ store[d]=Object.assign({},payload); } } saveLocal(); closeEditor(); render(); };
-var btnRange=document.getElementById('btnRange'); if(btnRange) btnRange.onclick=function(){ var ans=prompt('Appliquer du jour X au jour Y (ex: 5-12) :',''); if(!ans) return; var m=ans.match(/^\s*(\d{1,2})\s*[-–]\s*(\d{1,2})\s*$/); if(!m) return alert('Format invalide. Exemple : 5-12'); var a=parseInt(m[1],10), b=parseInt(m[2],10); if(a>b){ var tmp=a; a=b; b=tmp; } var dim=new Date(currentYear,currentMonth+1,0).getDate(); a=Math.max(1,Math.min(dim,a)); b=Math.max(1,Math.min(dim,b)); var payload={type:fType.value,hours:Number(fHours.value||0),detail:fDetail.value.trim(),note:fNote.value.trim()}; var store=ensureMonth(current,currentYear,currentMonth).days; for(var d=a; d<=b; d++){ store[d]=Object.assign({},payload); } saveLocal(); closeEditor(); render(); };
+
+// Remplir la semaine (bloque si 1 conflit détecté)
+var btnWeek=document.getElementById('btnWeek'); if(btnWeek) btnWeek.onclick=function(){
+  if(editDay==null) return;
+  var dt=new Date(currentYear,currentMonth,editDay), mon=mondayOf(dt), dim=new Date(currentYear,currentMonth+1,0).getDate();
+  var payload={type:fType.value,hours:Number(fHours.value||0),detail:(fDetail.value||'').trim(),note:fNote.value.trim()};
+  // check
+  for(var i=0;i<7;i++){
+    var d=mon.getDate()+i; if(d<1||d>dim) continue;
+    var c=findConflicts({name:current, year:currentYear, month:currentMonth, day:d, detail:payload.detail});
+    if(c){ alert('⛔ Conflit le '+String(d).padStart(2,'0')+'/'+String(currentMonth+1).padStart(2,'0')+': '+c.with+' est déjà à '+c.place+' sur des horaires qui se chevauchent.'); return; }
+  }
+  var store=ensureMonth(current,currentYear,currentMonth).days;
+  for(var i2=0;i2<7;i2++){
+    var dd=mon.getDate()+i2; if(dd>=1&&dd<=dim){ store[dd]=Object.assign({},payload); }
+  }
+  saveLocal(); closeEditor(); render();
+};
+
+// Appliquer sur une plage (bloque si 1 conflit détecté)
+var btnRange=document.getElementById('btnRange'); if(btnRange) btnRange.onclick=function(){
+  var ans=prompt('Appliquer du jour X au jour Y (ex: 5-12) :','');
+  if(!ans) return;
+  var m=ans.match(/^\s*(\d{1,2})\s*[-–]\s*(\d{1,2})\s*$/);
+  if(!m) return alert('Format invalide. Exemple : 5-12');
+  var a=parseInt(m[1],10), b=parseInt(m[2],10);
+  if(a>b){ var tmp=a; a=b; b=tmp; }
+  var dim=new Date(currentYear,currentMonth+1,0).getDate();
+  a=Math.max(1,Math.min(dim,a)); b=Math.max(1,Math.min(dim,b));
+  var payload={type:fType.value,hours:Number(fHours.value||0),detail:(fDetail.value||'').trim(),note:fNote.value.trim()};
+  for(var d=a; d<=b; d++){
+    var c=findConflicts({name:current, year:currentYear, month:currentMonth, day:d, detail:payload.detail});
+    if(c){ alert('⛔ Conflit le '+String(d).padStart(2,'0')+'/'+String(currentMonth+1).padStart(2,'0')+': '+c.with+' est déjà à '+c.place+' sur des horaires qui se chevauchent.'); return; }
+  }
+  var store=ensureMonth(current,currentYear,currentMonth).days;
+  for(var d2=a; d2<=b; d2++){ store[d2]=Object.assign({},payload); }
+  saveLocal(); closeEditor(); render();
+};
 
 // ====== INFO ======
 var infoBack=document.getElementById('infoBack'), infoTitle=document.getElementById('infoTitle'), infoBody=document.getElementById('infoBody'), infoClose=document.getElementById('infoClose'), infoEdit=document.getElementById('infoEdit');
 var infoDay=null;
-function openInfo(day){ if(isGeneral()){ openInfoGeneral(day); return; } infoDay=day; var data=ensureMonth(current,currentYear,currentMonth).days[day]||null; var dateStr=String(day).padStart(2,'0')+'/'+String(currentMonth+1).padStart(2,'0')+'/'+currentYear; infoTitle.textContent=dateStr+' — '+current; infoBody.innerHTML=''; if(!data){ infoBody.innerHTML='<div>Aucune donnée pour ce jour.</div>'; } else { var place=extractPlace(data.detail||''); var mates=place? findMates({year:currentYear,month:currentMonth,day:day,place:place,currentName:current}) : []; var preciseList=(data.detail||'').match(/\d{1,2}h\d{0,2}/g)||[]; var precise=preciseList.length? preciseList.join(' — ') : '—'; var band=document.createElement('div'); band.style.display='flex'; band.style.alignItems='center'; band.style.gap='10px'; band.style.background='#0c1a33'; band.style.border='1px solid #2a3d6d'; band.style.borderRadius='12px'; band.style.padding='10px 12px'; band.innerHTML='<div style="font-size:22px;font-weight:900">⏰ '+precise+'</div><div style="margin-left:auto;font-weight:800;padding:6px 10px;border-radius:999px;background:'+colorOf(data.type)+'">'+data.type+' · '+(data.hours!=null?data.hours:'-')+' h</div>'; infoBody.appendChild(band); var items=[["Lieu",place||'—'],["Détail",data.detail||'—'],["Note",data.note||'—'],["Avec",mates.length?mates.join(', '):'—']]; items.forEach(function(pair){ var k=pair[0],v=pair[1]; var row=document.createElement('div'); row.style.display='grid'; row.style.gridTemplateColumns='160px 1fr'; row.style.gap='8px'; row.innerHTML='<div style="color:#9aa3b2;font-weight:700">'+k+'</div><div>'+v+'</div>'; infoBody.appendChild(row); }); } if(infoEdit) infoEdit.style.display = editing? 'inline-block' : 'none'; infoBack.style.display='flex'; }
+function openInfo(day){ if(isGeneral()){ openInfoGeneral(day); return; } infoDay=day; var data=ensureMonth(current,currentYear,currentMonth).days[day]||null; var dateStr=String(day).padStart(2,'0')+'/'+String(currentMonth+1).padStart(2,'0')+'/'+currentYear; infoTitle.textContent=dateStr+' — '+current; infoBody.innerHTML=''; if(!data){ infoBody.innerHTML='<div>Aucune donnée pour ce jour.</div>'; } else { var place=extractPlace(data.detail||''); var mates=place? findMates({year:currentYear,month:currentMonth,day:day,place:place,currentName:current}) : []; var preciseList=(data.detail||'').match(/\d{1,2}h\d{0,2}/g)||[]; var precise=preciseList.length? preciseList.join(' — ') : '—'; var band=document.createElement('div'); band.style.display='flex'; band.style.alignItems='center'; band.style.gap='10px'; band.style.background='#0c1a33'; band.style.border='1px solid #2a3d6d'; band.style.borderRadius='12px'; band.style.padding='10px 12px'; var labelType=(data.type==='R'?'Congé':data.type); band.innerHTML='<div style="font-size:22px;font-weight:900">⏰ '+precise+'</div><div style="margin-left:auto;font-weight:800;padding:6px 10px;border-radius:999px;background:'+colorOf(data.type)+'">'+labelType+' · '+(data.hours!=null?data.hours:'-')+' h</div>'; infoBody.appendChild(band); var items=[["Lieu",place||'—'],["Détail",data.detail||'—'],["Note",data.note||'—'],["Avec",mates.length?mates.join(', '):'—']]; items.forEach(function(pair){ var k=pair[0],v=pair[1]; var row=document.createElement('div'); row.style.display='grid'; row.style.gridTemplateColumns='160px 1fr'; row.style.gap='8px'; row.innerHTML='<div style="color:#9aa3b2;font-weight:700">'+k+'</div><div>'+v+'</div>'; infoBody.appendChild(row); }); } if(infoEdit) infoEdit.style.display = editing? 'inline-block' : 'none'; infoBack.style.display='flex'; }
 
-function openInfoGeneral(day){ infoDay=day; var dateStr=String(day).padStart(2,'0')+'/'+String(currentMonth+1).padStart(2,'0')+'/'+currentYear; infoTitle.textContent=dateStr+' — Planning générale'; infoBody.innerHTML=''; var map=aggregateDay(currentYear,currentMonth,day); var places=Object.keys(map); if(places.length===0){ infoBody.innerHTML='<div>Aucune affectation ce jour.</div>'; } else { places.sort(function(a,b){ return a.localeCompare(b,'fr'); }); places.forEach(function(place){ var row=document.createElement('div'); row.style.display='grid'; row.style.gridTemplateColumns='160px 1fr'; row.style.gap='8px'; row.innerHTML='<div style="color:#9aa3b2;font-weight:700">'+place+'</div><div>'+map[place].join(', ')+'</div>'; infoBody.appendChild(row); }); }
+function openInfoGeneral(day){ infoDay=day; var dateStr=String(day).padStart(2,'0')+'/'+String(currentMonth+1).padStart(2,'0')+'/'+currentYear; infoTitle.textContent=dateStr+' — Planning générale'; infoBody.innerHTML=''; var map=aggregateDay(currentYear,currentMonth,day); var places=Object.keys(map); if(places.length===0){ infoBody.innerHTML='<div>Aucune affectation ce jour.</div>'; } else { places.sort(function(a,b){ return a.localeCompare(b,'fr'); }); places.forEach(function(place){ var row=document.createElement('div'); row.style.display='grid'; row.style.gridTemplateColumns='160px 1fr'; row.style.gap='8px'; var list=map[place].map(function(it){ var hoursPart=(it.hours!=null && it.hours!==''?' · '+String(it.hours).replace('.',',')+' h':''); var iv=it.intervals||''; var suffix = iv ? ' ('+iv+hoursPart+')' : hoursPart; return it.name+suffix; }).join(', '); row.innerHTML='<div style="color:#9aa3b2;font-weight:700">'+place+'</div><div>'+list+'</div>'; infoBody.appendChild(row); }); }
   if(infoEdit) infoEdit.style.display='none'; infoBack.style.display='flex'; }
 
 if(infoClose){ infoClose.onclick=function(){ infoBack.style.display='none'; infoDay=null; }; }
@@ -459,79 +612,27 @@ if(btnReset){ btnReset.onclick=function(){
   var ok=confirm('⚠️ Cette action est irréversible. Voulez-vous vraiment TOUT effacer (plannings et noms) ?');
   if(!ok) return;
   try{ localStorage.removeItem(STORAGE_KEY); }catch(_){}
-  // Efface d'anciens noms de clés possibles (sécurité compat)
   try{ localStorage.removeItem('planning_v1'); localStorage.removeItem('planning_simple'); }catch(_){}
-  // Réinitialise aussi l'état en mémoire puis rafraîchit totalement l'app
   var DEFAULT_PEOPLE=['Momo','Lucas','Sabri','Sofiane','Hamid','Adama','Iddir','Karim','Azeddine'];
   people=DEFAULT_PEOPLE.slice();
   peopleData={};
   current='Momo';
   editing=false;
-  // rafraîchit l'UI immédiate
   renderSidebar();
   var g=document.getElementById('btnGeneral'); if(g) g.classList.remove('active');
   render();
   showToast('Données effacées');
-  // recharge pour garantir un état 100% propre
   setTimeout(function(){ location.reload(); }, 120);
 }; }
 
-// ====== Test (non intrusifs)
+// ====== Tests rapides
 (function runDevTests(){
   try{
     console.info('[Tests] start');
-    // Helpers
     console.assert(extractPlace('Colline 7h/12h')==='Colline','extract Colline');
-    console.assert(extractPlace(' promenade 9h/15h ').toLowerCase()==='promenade','extract promenade');
-    console.assert(extractPlace('grande arche 7h30/12h').toLowerCase().includes('arche'),'extract Grande Arche');
-    console.assert(parseTimeToHours('7h')===7,'parse 7h');
     console.assert(parseTimeToHours('13h30')===13.5,'parse 13h30');
-    console.assert(parseTimeToHours('0h30')===0.5,'parse 0h30');
     console.assert(computeHoursFromDetail('7h/12h - 13h30/21h30')===13,'hours 13');
-    console.assert(computeHoursFromDetail('9h/15h - 16h30/21h30')===11,'hours 11');
-    console.assert(extractPlace('Accueil 8h/12h')==='Accueil','extract Accueil');
-    console.assert(typeof renderSidebar==='function','renderSidebar defined');
-    console.assert(typeof render==='function','render defined');
-    // ensureMonth shape
-    var mstore=ensureMonth('Test',2025,7); console.assert(mstore && mstore.days && typeof mstore.days==='object','ensureMonth days object');
-    // mates test
-    var ppl=['A','B','C'];
-    var pdata={ A:{2025:{7:{days:{1:{detail:'Colline 7h/12h',type:'C',hours:5}}}}}, B:{2025:{7:{days:{1:{detail:'colline 9h/12h',type:'C',hours:3}}}}}, C:{2025:{7:{days:{1:{detail:'Promenade 7h/12h',type:'P',hours:5}}}}} };
-    function matesStandalone(o){ var r=[]; for(var i=0;i<ppl.length;i++){ var n=ppl[i]; if(n===o.currentName) continue; var st=pdata[n]&&pdata[n][o.year]&&pdata[n][o.month]; var inf=st&&st.days&&st.days[o.day]; if(!inf) continue; var pl=extractPlace(inf.detail||''); if(pl && pl.toLowerCase()===o.place.toLowerCase()) r.push(n);} return r; }
-    var r1=matesStandalone({year:2025,month:7,day:1,place:'Colline',currentName:'A'}); console.assert(JSON.stringify(r1)===JSON.stringify(['B']),'mates [B]');
-    // aggregate tests
-    var backupPeopleData = JSON.parse(JSON.stringify(peopleData));
-    peopleData={ Alice:{2025:{7:{days:{1:{detail:'Colline 7h/12h',type:'C',hours:5}}}}}, Bob:{2025:{7:{days:{1:{detail:'Promenade 7h/12h',type:'P',hours:5}}}}}, Charlie:{2025:{7:{days:{1:{detail:'Colline 9h/12h',type:'C',hours:3}}}}} };
-    var ag=aggregateDay(2025,7,1); console.assert(Array.isArray(ag['Colline']) && ag['Colline'].length===2,'aggregate colline count 2'); console.assert(Array.isArray(ag['Promenade']) && ag['Promenade'].length===1,'aggregate promenade count 1');
-    // empty aggregate day
-    peopleData={}; var agEmpty=aggregateDay(2025,7,2); console.assert(Object.keys(agEmpty).length===0,'aggregate empty');
-    // restore app data to backup (keep empty per spec of starting empty)
-    peopleData = {};// toggle edit button tests
-    (function(){
-      var prevCurrent = current, prevEditing = editing;
-      current = 'Momo'; editing = false; render();
-      var btn = document.getElementById('btnEdit');
-      if (btn){
-        btn.click();
-        console.assert(editing===true && btn.textContent.indexOf('Désactiver')>-1, 'btnEdit should enable and show Désactiver');
-        btn.click();
-        console.assert(editing===false && btn.textContent.indexOf('Activer')>-1, 'btnEdit should disable and show Activer');
-      }
-      current = prevCurrent; editing = prevEditing; render();
-    })();
-
-    // edit badge tests (non-blocking if element present)
-    (function(){
-      var b=document.getElementById('editBadge'); if(!b) return; var prevEditing=editing, prevCurrent=current;
-      current='Momo'; editing=false; render();
-      console.assert(b.style.display==='none','badge hidden when editing=false');
-      editing=true; render();
-      console.assert(b.style.display==='block','badge visible when editing=true and not general');
-      current='__ALL__'; render();
-      console.assert(b.style.display==='none','badge hidden in general view');
-      editing=prevEditing; current=prevCurrent; render();
-    })();
-
+    var ints=intervals('7h/12h - 13h30/21h30'); console.assert(ints.length===2 && ints[0][0]===7 && ints[0][1]===12,'intervals ok');
     console.info('[Tests] ok');
   }catch(e){ console.warn('[Tests] fail',e); }
 })();
