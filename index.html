@@ -3,42 +3,18 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>MB Gardiennage — Planning sécurisé</title>
-
-<!-- Firebase SDK (compat) -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
+<title>MB Gardiennage — Planning</title>
 <style>
   :root{
     --bg:#0b1220; --text:#e5e7eb; --muted:#9aa3b2;
     --card:#0f172a; --border:#1f2a44; --shadow:0 10px 30px rgba(0,0,0,.35);
-    --c:#1e88ff; --p:#08a86b; --g:#ff8a2a; --r:#8b5cf6;
-    --accent:#2b5cff; --danger:#ef4444;
+    --c:#1e88ff; --p:#08a86b; --g:#ff8a2a; --r:#8b5cf6; --accent:#2b5cff;
     --sidebar:#0f172a; --sidebar-border:#1f2a44; --sidebar-hover:#162746;
     --chip:#101b33; --chip-bd:#2c3b63;
-    --grad: radial-gradient(1200px 600px at 0% 0%, #102041, #0b1220 60%);
   }
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
 
-  /* ===== Accueil ===== */
-  #home{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--grad);padding:24px}
-  .home-card{width:100%;max-width:860px;background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:22px}
-  .home-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
-  .home-title{font-weight:900;font-size:20px;color:#cfe0ff}
-  .home-sub{color:var(--muted);margin:6px 0 14px}
-  .btn{background:#13213d;border:1px solid #2a3d6d;color:#e5e7eb;border-radius:12px;padding:10px 12px;font-weight:800;cursor:pointer;box-shadow:var(--shadow)}
-  .btn:hover{background:#142a57}
-  .team-tile{margin:6px 0 14px;background:#0e1b33;border:1px solid #253a6b;padding:16px;border-radius:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;box-shadow:var(--shadow)}
-  .team-tile:hover{background:#11244a}
-  .home-grid{display:grid;gap:12px;grid-template-columns:repeat(2,1fr)}
-  @media(min-width:720px){.home-grid{grid-template-columns:repeat(4,1fr)}}
-  .person-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:transform .12s}
-  .person-card:hover{transform:translateY(-1px);background:var(--sidebar-hover)}
-  .avatar{width:64px;height:64px;border-radius:50%;border:2px solid var(--border);background:#17345f;display:flex;align-items:center;justify-content:center;font-weight:900}
-
-  /* ===== App ===== */
   .app{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
   .side{background:var(--sidebar);border-right:1px solid var(--sidebar-border);padding:16px 12px}
   .logo{font-weight:900;font-size:18px;color:#cfe0ff;margin-bottom:12px}
@@ -47,7 +23,6 @@
   .person:hover{background:var(--sidebar-hover)}
   .person.active{outline:2px solid #2b5cff66}
   .badge{width:10px;height:10px;border-radius:50%}
-  .lock{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
 
   header{position:sticky;top:0;background:var(--bg);z-index:15;display:flex;gap:10px;align-items:center;justify-content:space-between;padding:12px 12px 10px;border-bottom:1px solid #1b2340}
   h1{margin:0;font-size:20px}
@@ -58,7 +33,6 @@
   button:hover{background:#142a57}
   button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
   button.danger{border-color:#7f1d1d;background:#3f1d1d;color:#fecaca}
-  button[disabled]{opacity:.6;cursor:not-allowed}
   #menuBtn{display:none;border-radius:10px;padding:8px 10px}
 
   .wrap{max-width:1140px;margin:0 auto 40px;padding:0 12px}
@@ -82,7 +56,6 @@
   .mates{font-size:12px;color:#94a3b8;margin-top:6px}
   .empty{opacity:.25}
 
-  /* Modals */
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
   .chip{background:var(--chip);border:1px solid var(--chip-bd);border-radius:999px;padding:7px 10px;font-weight:800;cursor:pointer}
   .chip:hover{background:#182a55}
@@ -93,28 +66,15 @@
   input,select{width:100%;padding:10px;border:1px solid #2a3d6d;border-radius:10px;font-size:14px;background:#091124;color:#e5e7eb}
   .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap}
 
-  /* Drawer mobile */
-  #overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;z-index:25}
-  .side.drawer{position:fixed;top:0;left:0;height:100vh;width:86vw;max-width:320px;transform:translateX(-100%);transition:transform .25s ease;z-index:30;box-shadow:0 20px 60px rgba(0,0,0,.25)}
-  .side.drawer.open{transform:translateX(0)}
-  body.menu-open{overflow:hidden}
-
-  /* Mobile */
   @media (max-width:880px){
     .app{grid-template-columns:1fr}
     .side{position:static}
-    .side.drawer{display:block}
     #menuBtn{display:inline-block}
     .wrap{padding:0 10px}
     .calendar{grid-template-columns:repeat(2,1fr);gap:8px}
     .card{min-height:108px;padding:10px}
     .pill{padding:8px 12px;font-size:14px}
     h1{font-size:18px}
-  }
-  @media (max-width:390px){
-    .calendar{gap:6px}
-    .card{min-height:100px}
-    .pill{font-size:13px}
   }
 
   .toast{position:fixed;right:18px;bottom:18px;background:#111827;color:#fff;padding:10px 14px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.2);display:none;z-index:50}
@@ -135,10 +95,9 @@
   #printHeader .ph-r{background:#8b5cf6}
   @media print {
     html,body { background:#fff; color:#111; }
-    .header, #home, .side, header .toolbar, #menuBtn, #overlay, .modal-back, .small, .toast { display:none !important; }
+    .side, header .toolbar, #menuBtn, .modal-back, .toast { display:none !important; }
     #printHeader { display:block !important; }
     .wrap { max-width: none; padding:0; margin:0; }
-    .legend { display:none !important; }
     .calendar { grid-template-columns: repeat(7, 1fr) !important; gap: 6px !important; }
     .card { background:#fff !important; border:1px solid #d9dee8 !important; box-shadow:none !important; min-height:92px !important; padding:8px 8px 6px 8px !important; }
     .card.work { border-color:#9db6ff !important; }
@@ -150,7 +109,6 @@
     .pill[data-type="R"]{ background:#eadcff !important; }
     .note  { color:#444 !important; font-size:11px !important; margin-top:4px !important; }
     .mates { color:#333 !important; font-size:11px !important; margin-top:4px !important; }
-    .card { break-inside: avoid; page-break-inside: avoid; }
     .totals { display:flex; justify-content:flex-end; gap:6px; margin:4px 0 8px 0 !important; }
     .box { background:#fff !important; border:1px solid #d9dee8 !important; box-shadow:none !important; padding:6px 8px !important; border-radius:8px !important; }
     .box h3 { font-size:10px !important; color:#555 !important; margin:0 0 2px !important; }
@@ -159,59 +117,24 @@
 </style>
 </head>
 <body>
-
-<!-- ===== ACCUEIL ===== -->
-<section id="home">
-  <div class="home-card">
-    <div class="home-header">
-      <div>
-        <div class="home-title">MB Gardiennage — Planning</div>
-        <div class="home-sub">Bienvenue sur l’espace de consultation des plannings de l’entreprise <b>MB Gardiennage</b>.</div>
-      </div>
-      <div>
-        <button class="btn" id="adminBtn">Admin</button>
-        <button class="btn" id="aboutBtn" title="Infos">ℹ️</button>
-      </div>
-    </div>
-
-    <div id="teamBtn" class="team-tile">
-      <span class="team-title">Équipe IÉSEG</span>
-      <span class="team-chip">Afficher les noms ▶</span>
-    </div>
-
-    <div id="teamSection" style="display:none">
-      <div class="home-grid" id="homeGrid"></div>
-    </div>
-
-    <p style="margin-top:10px;color:#9aa3b2;font-size:12px">Mots de passe : Momo=<b>1</b>, Lucas=<b>2</b>, Sabri=<b>3</b>, Sofiane=<b>4</b>, Hamid=<b>5</b>, Adama=<b>6</b>, Iddir=<b>7</b>, Karim=<b>8</b>, Azeddine=<b>9</b>. Admin global = <b>securite</b>.</p>
-  </div>
-</section>
-
-<!-- ===== APPLICATION ===== -->
-<div id="app" class="app" style="display:none">
-  <aside class="side drawer">
-    <div class="logo">🗓️ Planning</div>
+<div id="app" class="app">
+  <aside class="side">
+    <div class="logo">🗓️ MB Gardiennage</div>
     <div class="people" id="people"></div>
-    <div class="lock" id="lockInfo">🔒 Lecture seule</div>
     <div style="margin-top:14px;color:#9aa3b2;font-size:12px">Astuce : clique le <b>mois</b> pour changer.</div>
   </aside>
-
   <main>
     <header>
       <button id="menuBtn" aria-label="Ouvrir le menu">☰</button>
-      <h1><span id="monthLabel">août 2025</span> — <span id="who" style="color:#9aa3b2">Sabri</span></h1>
+      <h1><span id="monthLabel">—</span> — <span id="who" style="color:#9aa3b2">—</span></h1>
       <div class="toolbar">
-        <button id="btnHome">Accueil</button>
-        <button id="btnLogout" class="danger">Déconnexion</button>
+        <button id="btnEdit">Activer l’édition</button>
+        <button id="btnPeople">Noms</button>
         <button id="btnPdf">PDF</button>
-        <button id="btnEdit" disabled>Activer l’édition</button>
-        <button id="btnPeople" disabled>Ajout & modification</button>
         <button id="btnSaveAll">Enregistrer</button>
         <button id="btnBackup">Export JSON</button>
         <button id="btnImport">Import JSON</button>
         <input type="file" id="fileImport" accept="application/json" hidden>
-        <button id="btnCloudTest">Test Cloud</button>
-        <span id="cloudStatus" class="muted" style="font-size:12px"></span>
       </div>
     </header>
 
@@ -246,7 +169,7 @@
   </main>
 </div>
 
-<!-- ===== MODALES ===== -->
+<!-- Modale édition -->
 <div class="modal-back" id="mb">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
     <h2 id="mTitle">Modifier</h2>
@@ -295,6 +218,7 @@
   </div>
 </div>
 
+<!-- Modale info -->
 <div class="modal-back" id="infoBack">
   <div class="modal" role="dialog" aria-modal="true">
     <h3 id="infoTitle" style="margin-top:0">Détails du jour</h3>
@@ -306,6 +230,7 @@
   </div>
 </div>
 
+<!-- Choix du mois -->
 <div class="modal-back" id="mpb">
   <div class="modal" role="dialog" aria-modal="true">
     <h3>Choisir un mois — <span id="curYear"></span></h3>
@@ -314,6 +239,7 @@
   </div>
 </div>
 
+<!-- Gestion des personnes -->
 <div class="modal-back" id="peopleModal">
   <div class="modal" role="dialog" aria-modal="true">
     <h3>Ajout & modification des noms</h3>
@@ -326,490 +252,108 @@
   </div>
 </div>
 
-<div id="overlay"></div>
 <div class="toast" id="toast">Enregistré ✅</div>
 
 <script>
-/* ========== DIAGNOSTIC GLOBAL (montre l’erreur si quelque chose casse) ========== */
+// ====== Sécurité syntaxique minimale ======
 window.addEventListener('error', function(e){
-  try{ console.error('JS error:', e.error || e.message || e); }catch(_){}}
-);
-window.addEventListener('unhandledrejection', function(e){
-  try{ console.error('Promise rejection:', e.reason); }catch(_){}}
-);
-
-/* ====== Firebase init ====== */
-var firebaseConfig = {
-  apiKey: "AIzaSyDzRKWYfnCiTQYogVQmYngfoCqGZlQxtJk",
-  authDomain: "planning-secu.firebaseapp.com",
-  databaseURL: "https://planning-secu-default-rtdb.europe-west1.firebasedatabase.app/",
-  projectId: "planning-secu",
-  storageBucket: "planning-secu.appspot.com",
-  messagingSenderId: "688317228037",
-  appId: "1:688317228037:web:eb57c7efdbfd081c96286c",
-  measurementId: "G-H5XDZDJMH5"
-};
-firebase.initializeApp(firebaseConfig);
-var db = firebase.database();
-var CLOUD_PATH = "mbgardiennage/ieseg";
-
-/* ===== RÔLES & ACCÈS ===== */
-var ADMIN_PASS="securite";
-var PERSON_PASSES={Momo:"1",Lucas:"2",Sabri:"3",Sofiane:"4",Hamid:"5",Adama:"6",Iddir:"7",Karim:"8",Azeddine:"9"};
-var authRole=null,authUser=null;
-var canEditAll=false, canViewAll=false;
-
-/* ===== ÉTAT ===== */
-var current="Sabri",currentYear=new Date().getFullYear(),currentMonth=new Date().getMonth(),editing=false,editDay=null;
-var people=["Momo","Lucas","Sabri","Sofiane","Hamid","Adama","Iddir","Karim","Azeddine"];
-var peopleData={};
-var monthNames=["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
-
-/* ===== HELPERS ===== */
-function ensureMonth(name,y,m){if(!peopleData[name])peopleData[name]={};if(!peopleData[name][y])peopleData[name][y]={};if(!peopleData[name][y][m])peopleData[name][y][m]={days:{}};return peopleData[name][y][m];}
-function colorOf(t){return ({C:'var(--c)',P:'var(--p)',G:'var(--g)',R:'var(--r)'}[t]||'#999');}
-function weekNumber(dt){var t=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate()));var d=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-d);var y0=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil((((t-y0)/86400000)+1)/7);} 
-function mondayOf(dt){var d=(dt.getDay()+6)%7;var m=new Date(dt);m.setDate(dt.getDate()-d);return m;}
-function parseTimeToHours(t){var m=t.match(/^(\d{1,2})h(?:(\d{2}))?$/i);if(!m)return null;var H=parseInt(m[1],10),M=parseInt(m[2]||"0",10);return H+(M/60);} 
-function computeHoursFromDetail(detail){var times=(detail.match(/\d{1,2}h\d{0,2}/g)||[]).map(parseTimeToHours).filter(function(v){return v!=null;});var s=0;for(var i=0;i+1<times.length;i+=2)s+=times[i+1]-times[i];return Math.round(s*2)/2;}
-function showToast(t){var el=document.getElementById('toast');el.textContent=t||"OK";el.style.display='block';setTimeout(function(){el.style.display='none';},1500);} 
-
-/* ===== STOCKAGE local ===== */
-var STORAGE_KEY="planning_secure_v2";
-function saveLocal(){var data={people:people,peopleData:peopleData,current:current,currentYear:currentYear,currentMonth:currentMonth};localStorage.setItem(STORAGE_KEY,JSON.stringify(data));}
-function loadLocal(){try{var s=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");if(!s)return false;people=s.people||people;Object.assign(peopleData,s.peopleData||{});current=s.current||current;currentYear=s.currentYear||currentYear;currentMonth=s.currentMonth||currentMonth;return true;}catch(e){return false;}}
-
-/* ===== CLOUD ===== */
-async function cloudSave() {
-  var payload = { people:people, peopleData:peopleData, current:current, currentYear:currentYear, currentMonth:currentMonth, ts: Date.now() };
-  try {
-    await db.ref(CLOUD_PATH).set(payload);
-    var cs=document.getElementById('cloudStatus'); if(cs) cs.textContent = 'Dernière sauvegarde: '+new Date().toLocaleString('fr-FR');
-    showToast("Sauvegardé en ligne ☁️✅");
-  } catch (err) {
-    console.error("cloudSave error:", err);
-    alert("Erreur sauvegarde cloud : " + (err && err.message ? err.message : err));
-    throw err;
-  }
-}
-async function cloudLoad() {
-  try {
-    var snap = await db.ref(CLOUD_PATH).get();
-    if (!snap.exists()) return false;
-    var s = snap.val();
-    if (s.people) people = s.people;
-    if (s.peopleData) { for (var k in peopleData) delete peopleData[k]; Object.assign(peopleData, s.peopleData); }
-    current = s.current != null ? s.current : current;
-    currentYear = s.currentYear != null ? s.currentYear : currentYear;
-    currentMonth = s.currentMonth != null ? s.currentMonth : currentMonth;
-    var cs=document.getElementById('cloudStatus'); if(cs) cs.textContent = 'Chargé du cloud';
-    return true;
-  } catch (err) {
-    console.error("cloudLoad error:", err);
-    alert("Erreur chargement cloud : " + (err && err.message ? err.message : err));
-    return false;
-  }
-}
-
-/* ===== Seed exemple ===== */
-function seedDefaultsIfEmpty(){
-  var hasSabri=peopleData["Sabri"]&&peopleData["Sabri"][2025]&&peopleData["Sabri"][2025][7];
-  if(!hasSabri){
-    ensureMonth("Sabri",2025,7).days={
-      1:{type:'C',hours:11,detail:'Colline 7h–12 / 13h30–21h30',note:'Fin 21h'},
-      4:{type:'G',hours:8.5,detail:'Grande Arche 7h30–12 / 13h30–21h'},
-      6:{type:'R',hours:3.5,detail:'Ronde',note:'Fin 21h'},
-      7:{type:'G',hours:8.5,detail:'Grande Arche 7h30–12 / 13h30–21h'},
-      8:{type:'G',hours:8.5,detail:'Grande Arche 7h30–12 / 13h30–21h'},
-      11:{type:'C',hours:11,detail:'Colline 7h–12 / 13h30–21h30',note:'Fin 19h'},
-      12:{type:'C',hours:11,detail:'Colline 7h–12 / 13h30–21h30'},
-      14:{type:'C',hours:11,detail:'Colline 7h–12 / 13h30–21h30',note:'Fin 19h'},
-      19:{type:'P',hours:13,detail:'Promenade 7h–13h30 / 15h–21h30'},
-      20:{type:'C',hours:13,detail:'Colline 7h–12 / 13h30–21h30'},
-      22:{type:'C',hours:13,detail:'Colline 7h–12 / 13h30–21h30'},
-      26:{type:'C',hours:13,detail:'Colline 7h–12 / 13h30–21h30'},
-      27:{type:'P',hours:13,detail:'Promenade 7h–13h30 / 15h–21h30'},
-      29:{type:'C',hours:13,detail:'Colline 7h–12 / 13h30–21h30'}
-    };
-  }
-}
-
-/* ===== Place & mates ===== */
-var PLACE_WORDS = ["Promenade","Colline","Grande Arche","Arche","Accueil","Gardiennage"];
-function extractPlace(detail){
-  detail = (detail||"").trim(); if(!detail) return null;
-  for(var i=0;i<PLACE_WORDS.length;i++){
-    var p=PLACE_WORDS[i];
-    var re=new RegExp("^\\s*"+p.replace(/[-/\\^$*+?.()|[\]{}]/g,"\\$&")+"\\b","i");
-    if(re.test(detail)) return p;
-  }
-  var m=detail.match(/^\s*([A-Za-zÀ-ÖØ-öø-ÿ]+)\b/);
-  return m ? (m[1].charAt(0).toUpperCase()+m[1].slice(1).toLowerCase()) : null;
-}
-function findMates(opts){
-  var year=opts.year,month=opts.month,day=opts.day,place=opts.place,currentName=opts.currentName;
-  if(!place) return [];
-  var mates=[];
-  for(var i=0;i<people.length;i++){
-    var name=people[i];
-    if(name===currentName) continue;
-    var store=peopleData[name] && peopleData[name][year] && peopleData[name][year][month];
-    var info=store && store.days && store.days[day];
-    if(!info) continue;
-    var place2=extractPlace(info.detail||"");
-    if(place2 && place2.toLowerCase()===place.toLowerCase()) mates.push(name);
-  }
-  return mates;
-}
-
-/* ===== Self-tests (non bloquants) ===== */
-(function(){
-  try{
-    console.group('Self-tests');
-    // computeHoursFromDetail
-    console.assert(computeHoursFromDetail('Promenade 7h/13h30 - 15h/21h30') === 13, 'computeHoursFromDetail test #1');
-    console.assert(computeHoursFromDetail('Grande Arche 7h30/12h - 13h30/21h') === 12, 'computeHoursFromDetail test #2');
-    console.assert(computeHoursFromDetail('Colline 9h/13h30 - 15h/21h30') === 11, 'computeHoursFromDetail test #3');
-    // findMates (sandbox des données)
-    var _people=people, _peopleData=peopleData;
-    people=['A','B','C']; peopleData={};
-    ensureMonth('A',2025,7).days[10] = {detail:'Colline 7h–12 / 13h30–21h30', type:'C', hours:13};
-    ensureMonth('B',2025,7).days[10] = {detail:'Colline 9h/13h30 - 15h/21h30', type:'C', hours:11};
-    ensureMonth('C',2025,7).days[10] = {detail:'Promenade 7h/13h30 - 15h/21h30', type:'P', hours:13};
-    var matesA = findMates({year:2025, month:7, day:10, place:'Colline', currentName:'A'});
-    console.assert(JSON.stringify(matesA.sort()) === JSON.stringify(['B']), 'findMates test #1');
-    var matesC = findMates({year:2025, month:7, day:10, place:'Promenade', currentName:'C'});
-    console.assert(JSON.stringify(matesC) === JSON.stringify([]), 'findMates test #2');
-    // restore
-    people=_people; peopleData=_peopleData;
-    console.log('Self-tests passed ✅');
-    console.groupEnd();
-  }catch(e){ console.warn('Self-tests warning:', e); }
-})();
-
-/* ===== Accueil ===== */
-var teamBtn=document.getElementById('teamBtn');
-var teamSection=document.getElementById('teamSection');
-if(teamBtn){
-  teamBtn.onclick=function(){ teamSection.style.display='block'; teamBtn.style.display='none'; renderHome(); };
-}
-var adminBtn=document.getElementById('adminBtn');
-if(adminBtn){
-  adminBtn.onclick=function(){
-    var p=prompt('Mot de passe administrateur :');
-    if(p===ADMIN_PASS){authRole='admin';authUser=null;canEditAll=true;canViewAll=true;enterApp('Sabri');showToast('Admin connecté ✅');}
-    else if(p){ alert('Mot de passe incorrect.'); }
-  };
-}
-var aboutBtn=document.getElementById('aboutBtn');
-if(aboutBtn){ aboutBtn.onclick=function(){ alert('Clique « Équipe IÉSEG », choisis un nom et entre son mot de passe. Admin = securite.'); }; }
-
-function renderHome(){
-  var grid=document.getElementById('homeGrid'); if(!grid) return;
-  grid.innerHTML='';
-  for(var i=0;i<people.length;i++){
-    var name=people[i];
-    var card=document.createElement('div');card.className='person-card';
-    card.innerHTML='<div class="avatar"><span>'+name[0]+'</span></div><div class="pname">'+name+'</div>';
-    (function(n){ card.onclick=function(){ requestAccess(n); }; })(name);
-    grid.appendChild(card);
-  }
-}
-
-/* ===== Auth ===== */
-function requestAccess(name){
-  var pwd=prompt('Mot de passe pour '+name+' (ou "securite") :'); 
-  if(!pwd) return;
-
-  // reset
-  authRole=null; authUser=null; canEditAll=false; canViewAll=false;
-
-  if(pwd===ADMIN_PASS){
-    authRole='admin'; authUser=null; canEditAll=true; canViewAll=true;
-    enterApp(name); showToast('Admin connecté ✅');
-    return;
-  }
-
-  if(PERSON_PASSES[name]===pwd){
-    authRole='user'; authUser=name;
-    if(name==='Momo'){ canEditAll=true; canViewAll=true; }
-    else if(name==='Sabri'){ canEditAll=false; canViewAll=true; }
-    else{ canEditAll=false; canViewAll=false; }
-    enterApp(name); showToast('Connecté : '+name+' ✅');
-    return;
-  }
-
-  alert('Mot de passe incorrect.');
-}
-
-/* ===== Entrer / Quitter app ===== */
-function enterApp(initialName){
-  current=initialName||current;
-  var home=document.getElementById('home'); if(home) home.style.display='none';
-  var app=document.getElementById('app'); if(app) app.style.display='grid';
-  var btnPeople=document.getElementById('btnPeople'); if(btnPeople) btnPeople.disabled=!canEditAll;
-  var btnEdit=document.getElementById('btnEdit'); if(btnEdit) btnEdit.disabled=!canEditAll;
-  var lock=document.getElementById('lockInfo');
-  if(lock) lock.textContent = canEditAll ? '✅ Édition autorisée' : (canViewAll ? '👁️ Lecture (tous plannings)' : '👁️ Lecture (planning perso)');
-  renderSidebar(); render();
-}
-function goHome(){editing=false;var app=document.getElementById('app'); if(app) app.style.display='none'; var home=document.getElementById('home'); if(home) home.style.display='flex';}
-var btnHome=document.getElementById('btnHome'); if(btnHome) btnHome.onclick=goHome;
-var btnLogout=document.getElementById('btnLogout'); if(btnLogout) btnLogout.onclick=function(){authRole=null;authUser=null;canEditAll=false;canViewAll=false;goHome();};
-
-/* ===== Sidebar ===== */
-var peopleEl=document.getElementById('people');
-function renderSidebar(){
-  if(!peopleEl) return;
-  peopleEl.innerHTML='';
-  var list=(canViewAll||canEditAll)?people:(authUser?[authUser]:[]);
-  var colors=['#9bd0ff','#ffd28a','#8ec5ff','#c4f6c1','#ffb4b4','#d7c7ff','#ffe69b','#a0e9dd','#fbd1ff'];
-  for(var i=0;i<list.length;i++){
-    (function(name,idx){
-      var el=document.createElement('div');el.className='person'+(name===current?' active':'');
-      el.innerHTML='<span class="badge" style="background:'+colors[idx%colors.length]+'"></span>'+name;
-      el.onclick=function(){
-        current=name;
-        var nodes=document.querySelectorAll('.person'); for(var j=0;j<nodes.length;j++) nodes[j].classList.remove('active');
-        el.classList.add('active'); saveLocal(); render(); closeMenu();
-      };
-      peopleEl.appendChild(el);
-    })(list[i],i);
-  }
-}
-
-/* ===== Calendrier ===== */
-function render(){
-  var who=document.getElementById('who'); if(who) who.textContent=current;
-  var monthLabel=document.getElementById('monthLabel'); if(monthLabel) monthLabel.textContent=monthNames[currentMonth]+' '+currentYear;
-
-  var store=ensureMonth(current,currentYear,currentMonth);var days=store.days;
-  var cal=document.getElementById('cal'); if(!cal) return; cal.innerHTML='';
-  ['lun','mar','mer','jeu','ven','sam','dim'].forEach(function(d){var el=document.createElement('div');el.className='dow';el.textContent=d;cal.appendChild(el);});
-  var first=new Date(currentYear,currentMonth,1),offset=(first.getDay()+6)%7,dim=new Date(currentYear,currentMonth+1,0).getDate();
-  for(var i=0;i<offset;i++){var e=document.createElement('div');e.className='card empty';cal.appendChild(e);} 
-  for(var day=1;day<=dim;day++){
-    var card=document.createElement('div');card.className='card';card.setAttribute('data-day',day);
-    var dd=document.createElement('div');dd.className='date';dd.textContent=String(day).padStart(2,'0');card.appendChild(dd);
-
-    var info=days[day];
-    if(info){
-      card.classList.add('work');
-      var pill=document.createElement('div');pill.className='pill';pill.setAttribute('data-type',info.type);pill.style.background=colorOf(info.type);
-      pill.innerHTML='<span>'+info.type+'</span> <small>'+String(info.hours).replace('.',',')+' h</small>';pill.title=info.detail||'';card.appendChild(pill);
-      if(info.note){var n=document.createElement('div');n.className='note';n.textContent=info.note;card.appendChild(n);} 
-
-      var place=extractPlace(info.detail||'');
-      if(place){
-        var mates=findMates({year:currentYear, month:currentMonth, day:day, place:place, currentName: current});
-        if(mates.length){
-          var mEl=document.createElement('div');mEl.className='mates';
-          mEl.textContent='Avec : '+mates.join(', ');
-          card.appendChild(mEl);
-        }
-      }
-    }else if(editing&&canEditAll){
-      var plus=document.createElement('div');plus.className='pill';plus.style.background='#27406f';plus.textContent='+ Ajouter';plus.style.color='#fff';plus.style.marginTop='22px';card.appendChild(plus);
-      plus.onclick=(function(d){return function(ev){ ev.stopPropagation(); openEditor(d); };})(day);
-    }
-
-    card.onclick=(function(d){ return function(){ openInfo(d); }; })(day);
-    cal.appendChild(card);
-  }
-  var filled=offset+dim,rest=(7-(filled%7))%7;for(var r=0;r<rest;r++){var ee=document.createElement('div');ee.className='card empty';cal.appendChild(ee);} 
-  renderTotals(days);
-  updatePrintHeader();
-}
-function renderTotals(days){
-  var totals=document.getElementById('totals'); if(!totals) return; totals.innerHTML='';var monthSum=0;Object.values(days).forEach(function(v){monthSum+=Number(v.hours||0);});
-  totals.appendChild(box('Total mois',monthSum.toFixed(2).replace('.',',')+' h'));
-  var weeks={},dim=new Date(currentYear,currentMonth+1,0).getDate();
-  for(var d=1;d<=dim;d++){if(days[d]){var w=weekNumber(new Date(currentYear,currentMonth,d));weeks[w]=(weeks[w]||0)+Number(days[d].hours||0);}}
-  Object.keys(weeks).sort(function(a,b){return a-b;}).forEach(function(w){totals.appendChild(box('Sem. '+w,weeks[w].toFixed(2).replace('.',',')+' h'));});
-  function box(t,v){var el=document.createElement('div');el.className='box';el.innerHTML='<h3>'+t+'</h3><div>'+v+'</div>';return el;}
-}
-
-/* ===== Impression ===== */
-function updatePrintHeader(){
-  var phPerson=document.getElementById('phPerson'); if(phPerson) phPerson.textContent=current;
-  var phMonth=document.getElementById('phMonth'); if(phMonth) phMonth.textContent=monthNames[currentMonth]+" "+currentYear;
-  var phDate=document.getElementById('phDate'); if(phDate) phDate.textContent=new Date().toLocaleString('fr-FR');
-}
-
-/* ===== Modale édition ===== */
-var mb=document.getElementById('mb');var fType=document.getElementById('fType'),fHours=document.getElementById('fHours'),fDetail=document.getElementById('fDetail'),fNote=document.getElementById('fNote');
-function openEditor(day){
-  editDay=day;var d=ensureMonth(current,currentYear,currentMonth).days[day]||{type:'C',hours:'',detail:'',note:''};
-  document.getElementById('mTitle').textContent=String(day).padStart(2,'0')+'/'+String(currentMonth+1).padStart(2,'0')+'/'+currentYear+' — '+current;
-  fType.value=d.type||'C';fHours.value=(d.hours!=null?d.hours:'');fDetail.value=d.detail||'';fNote.value=d.note||'';mb.style.display='flex';
-}
-function closeEditor(){mb.style.display='none';editDay=null;}
-var btnClose=document.getElementById('btnClose'); if(btnClose) btnClose.onclick=closeEditor;
-Array.prototype.forEach.call(document.querySelectorAll('.chip[data-preset]'), function(ch){
-  ch.onclick=function(){var p=JSON.parse(ch.getAttribute('data-preset'));fType.value=p.type||'C';fDetail.value=p.detail||'';if(p.autoHours&&p.detail){var h=computeHoursFromDetail(p.detail);fHours.value=(isFinite(h)?h:0);}};
+  try{ console.error('JS error:', e.error || e.message || e); }catch(_){ }
 });
-var copyPrev=document.getElementById('copyPrev'); if(copyPrev) copyPrev.onclick=function(){if(editDay==null)return;var prev=ensureMonth(current,currentYear,currentMonth).days[editDay-1];if(prev){fType.value=prev.type;fHours.value=prev.hours;fDetail.value=prev.detail||'';fNote.value=prev.note||'';}};
-var btnSave=document.getElementById('btnSave'); if(btnSave) btnSave.onclick=async function(){if(!canEditAll)return alert('Édition admin requise.');if(editDay==null)return;
-  ensureMonth(current,currentYear,currentMonth).days[editDay]={type:fType.value,hours:Number(fHours.value||0),detail:fDetail.value.trim(),note:fNote.value.trim()};
-  saveLocal(); try{await cloudSave();}catch(e){}
-  closeEditor();render();
-};
-var btnDel=document.getElementById('btnDel'); if(btnDel) btnDel.onclick=async function(){if(!canEditAll)return alert('Édition admin requise.');if(editDay==null)return;
-  delete ensureMonth(current,currentYear,currentMonth).days[editDay];
-  saveLocal(); try{await cloudSave();}catch(e){}
-  closeEditor();render();
-};
-var btnWeek=document.getElementById('btnWeek'); if(btnWeek) btnWeek.onclick=async function(){if(!canEditAll)return alert('Édition admin requise.');if(editDay==null)return;
-  var dt=new Date(currentYear,currentMonth,editDay),mon=mondayOf(dt),dim=new Date(currentYear,currentMonth+1,0).getDate();
-  var payload={type:fType.value,hours:Number(fHours.value||0),detail:fDetail.value.trim(),note:fNote.value.trim()};
-  var store=ensureMonth(current,currentYear,currentMonth).days;for(var i=0;i<7;i++){var d=mon.getDate()+i;if(d>=1&&d<=dim){store[d]=Object.assign({},payload);}}
-  saveLocal(); try{await cloudSave();}catch(e){}
-  closeEditor();render();
-};
-var btnRange=document.getElementById('btnRange'); if(btnRange) btnRange.onclick=async function(){if(!canEditAll)return alert('Édition admin requise.');var ans=prompt('Appliquer du jour X au jour Y (ex: 5-12) :','');if(!ans)return;
-  var m=ans.match(/^\s*(\d{1,2})\s*[-–]\s*(\d{1,2})\s*$/);if(!m)return alert('Format invalide. Exemple : 5-12');
-  var a=parseInt(m[1],10),b=parseInt(m[2],10);
-  if(a>b){ var tmp=a; a=b; b=tmp; } /* swap robuste */
-  var dim=new Date(currentYear,currentMonth+1,0).getDate();a=Math.max(1,Math.min(dim,a));b=Math.max(1,Math.min(dim,b));
-  var payload={type:fType.value,hours:Number(fHours.value||0),detail:fDetail.value.trim(),note:fNote.value.trim()};
-  var store=ensureMonth(current,currentYear,currentMonth).days;for(var d=a;d<=b;d++){store[d]=Object.assign({},payload);} 
-  saveLocal(); try{await cloudSave();}catch(e){}
-  closeEditor();render();
-};
+window.addEventListener('unhandledrejection', function(e){
+  try{ console.error('Promise rejection:', e.reason); }catch(_){ }
+});
 
-/* ===== Modale INFO ===== */
-var infoBack=document.getElementById('infoBack'),infoTitle=document.getElementById('infoTitle'),infoBody=document.getElementById('infoBody'),infoClose=document.getElementById('infoClose'),infoEdit=document.getElementById('infoEdit');
+// ====== ÉTAT GLOBAL (pas d'auth, tout en local) ======
+var current = 'Sabri';
+var now = new Date();
+var currentYear = now.getFullYear();
+var currentMonth = now.getMonth();
+var editing = false, editDay = null;
+var people = ['Momo','Lucas','Sabri','Sofiane','Hamid','Adama','Iddir','Karim','Azeddine'];
+var peopleData = {};
+var monthNames = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+
+// ====== HELPERS ======
+function ensureMonth(name,y,m){ if(!peopleData[name]) peopleData[name] = {}; if(!peopleData[name][y]) peopleData[name][y] = {}; if(!peopleData[name][y][m]) peopleData[name][y][m] = {days:{}}; return peopleData[name][y][m]; }
+function colorOf(t){ return ({C:'var(--c)',P:'var(--p)',G:'var(--g)',R:'var(--r)'}[t]||'#999'); }
+function weekNumber(dt){ var t=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate())); var d=t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-d); var y0=new Date(Date.UTC(t.getUTCFullYear(),0,1)); return Math.ceil((((t-y0)/86400000)+1)/7); }
+function mondayOf(dt){ var d=(dt.getDay()+6)%7; var m=new Date(dt); m.setDate(dt.getDate()-d); return m; }
+function parseTimeToHours(t){ var m=t.match(/^(\d{1,2})h(?:(\d{2}))?$/i); if(!m)return null; var H=parseInt(m[1],10), M=parseInt(m[2]||'0',10); return H+(M/60); }
+function computeHoursFromDetail(detail){ var times=(detail.match(/\d{1,2}h\d{0,2}/g)||[]).map(parseTimeToHours).filter(function(v){return v!=null;}); var s=0; for(var i=0;i+1<times.length;i+=2) s+=times[i+1]-times[i]; return Math.round(s*2)/2; }
+function showToast(t){ var el=document.getElementById('toast'); el.textContent=t||'OK'; el.style.display='block'; setTimeout(function(){ el.style.display='none'; },1200); }
+var PLACE_WORDS=['Promenade','Colline','Grande Arche','Arche','Accueil','Gardiennage'];
+function extractPlace(detail){ detail=(detail||'').trim(); if(!detail) return null; for(var i=0;i<PLACE_WORDS.length;i++){ var p=PLACE_WORDS[i]; var re=new RegExp('^\\s*'+p.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&')+'\\b','i'); if(re.test(detail)) return p; } var m=detail.match(/^\s*([A-Za-zÀ-ÖØ-öø-ÿ]+)\b/); return m ? (m[1].charAt(0).toUpperCase()+m[1].slice(1).toLowerCase()) : null; }
+function findMates(opts){ var year=opts.year,month=opts.month,day=opts.day,place=opts.place,currentName=opts.currentName; if(!place) return []; var mates=[]; for(var i=0;i<people.length;i++){ var name=people[i]; if(name===currentName) continue; var store=peopleData[name] && peopleData[name][year] && peopleData[name][year][month]; var info=store && store.days && store.days[day]; if(!info) continue; var place2=extractPlace(info.detail||''); if(place2 && place2.toLowerCase()===place.toLowerCase()) mates.push(name); } return mates; }
+
+// ====== LOCALSTORAGE ======
+var STORAGE_KEY='planning_simple_v1';
+function saveLocal(){ var data={people:people,peopleData:peopleData,current:current,currentYear:currentYear,currentMonth:currentMonth}; localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+function loadLocal(){ try{ var s=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null'); if(!s) return false; people=s.people||people; Object.assign(peopleData, s.peopleData||{}); current=s.current||current; currentYear=s.currentYear||currentYear; currentMonth=s.currentMonth||currentMonth; return true; }catch(e){ return false; } }
+
+// ====== SEED (exemple Sabri août 2025) ======
+function seedDefaultsIfEmpty(){ var has=peopleData['Sabri'] && peopleData['Sabri'][2025] && peopleData['Sabri'][2025][7]; if(!has){ ensureMonth('Sabri',2025,7).days={ 1:{type:'C',hours:11,detail:'Colline 7h–12 / 13h30–21h30',note:'Fin 21h'}, 4:{type:'G',hours:8.5,detail:'Grande Arche 7h30–12 / 13h30–21h'}, 6:{type:'R',hours:3.5,detail:'Ronde',note:'Fin 21h'}, 7:{type:'G',hours:8.5,detail:'Grande Arche 7h30–12 / 13h30–21h'}, 8:{type:'G',hours:8.5,detail:'Grande Arche 7h30–12 / 13h30–21h'}, 11:{type:'C',hours:11,detail:'Colline 7h–12 / 13h30–21h30',note:'Fin 19h'}, 12:{type:'C',hours:11,detail:'Colline 7h–12 / 13h30–21h30'}, 14:{type:'C',hours:11,detail:'Colline 7h–12 / 13h30–21h30',note:'Fin 19h'}, 19:{type:'P',hours:13,detail:'Promenade 7h–13h30 / 15h–21h30'}, 20:{type:'C',hours:13,detail:'Colline 7h–12 / 13h30–21h30'}, 22:{type:'C',hours:13,detail:'Colline 7h–12 / 13h30–21h30'}, 26:{type:'C',hours:13,detail:'Colline 7h–12 / 13h30–21h30'}, 27:{type:'P',hours:13,detail:'Promenade 7h–13h30 / 15h–21h30'}, 29:{type:'C',hours:13,detail:'Colline 7h–12 / 13h30–21h30'} }; } }
+
+// ====== RENDER ======
+var peopleEl=document.getElementById('people');
+function renderSidebar(){ if(!peopleEl) return; peopleEl.innerHTML=''; var colors=['#9bd0ff','#ffd28a','#8ec5ff','#c4f6c1','#ffb4b4','#d7c7ff','#ffe69b','#a0e9dd','#fbd1ff']; for(var i=0;i<people.length;i++){ (function(name,idx){ var el=document.createElement('div'); el.className='person'+(name===current?' active':''); el.innerHTML='<span class="badge" style="background:'+colors[idx%colors.length]+'"></span>'+name; el.onclick=function(){ current=name; document.querySelectorAll('.person').forEach(function(n){n.classList.remove('active')}); el.classList.add('active'); saveLocal(); render(); }; peopleEl.appendChild(el); })(people[i],i); } }
+
+function render(){ var who=document.getElementById('who'); if(who) who.textContent=current; var monthLabel=document.getElementById('monthLabel'); if(monthLabel) monthLabel.textContent=monthNames[currentMonth]+' '+currentYear; var store=ensureMonth(current,currentYear,currentMonth); var days=store.days; var cal=document.getElementById('cal'); if(!cal) return; cal.innerHTML=''; ['lun','mar','mer','jeu','ven','sam','dim'].forEach(function(d){ var el=document.createElement('div'); el.className='dow'; el.textContent=d; cal.appendChild(el); }); var first=new Date(currentYear,currentMonth,1), offset=(first.getDay()+6)%7, dim=new Date(currentYear,currentMonth+1,0).getDate(); for(var i=0;i<offset;i++){ var e=document.createElement('div'); e.className='card empty'; cal.appendChild(e); } for(var day=1; day<=dim; day++){ var card=document.createElement('div'); card.className='card'; card.setAttribute('data-day',day); var dd=document.createElement('div'); dd.className='date'; dd.textContent=String(day).padStart(2,'0'); card.appendChild(dd); var info=days[day]; if(info){ card.classList.add('work'); var pill=document.createElement('div'); pill.className='pill'; pill.setAttribute('data-type',info.type); pill.style.background=colorOf(info.type); pill.innerHTML='<span>'+info.type+'</span> <small>'+String(info.hours).replace('.',',')+' h</small>'; pill.title=info.detail||''; card.appendChild(pill); if(info.note){ var n=document.createElement('div'); n.className='note'; n.textContent=info.note; card.appendChild(n); } var place=extractPlace(info.detail||''); if(place){ var mates=findMates({year:currentYear,month:currentMonth,day:day,place:place,currentName:current}); if(mates.length){ var mEl=document.createElement('div'); mEl.className='mates'; mEl.textContent='Avec : '+mates.join(', '); card.appendChild(mEl); } } } else if(editing){ var plus=document.createElement('div'); plus.className='pill'; plus.style.background='#27406f'; plus.style.color='#fff'; plus.style.marginTop='22px'; plus.textContent='+ Ajouter'; plus.onclick=(function(d){ return function(ev){ ev.stopPropagation(); openEditor(d); }; })(day); card.appendChild(plus); } card.onclick=(function(d){ return function(){ openInfo(d); }; })(day); cal.appendChild(card); } var filled=offset+dim, rest=(7-(filled%7))%7; for(var r=0;r<rest;r++){ var ee=document.createElement('div'); ee.className='card empty'; cal.appendChild(ee); } renderTotals(days); updatePrintHeader(); }
+
+function renderTotals(days){ var totals=document.getElementById('totals'); if(!totals) return; totals.innerHTML=''; var monthSum=0; Object.values(days).forEach(function(v){ monthSum+=Number(v.hours||0); }); totals.appendChild(box('Total mois',monthSum.toFixed(2).replace('.',',')+' h')); var weeks={}, dim=new Date(currentYear,currentMonth+1,0).getDate(); for(var d=1; d<=dim; d++){ if(days[d]){ var w=weekNumber(new Date(currentYear,currentMonth,d)); weeks[w]=(weeks[w]||0)+Number(days[d].hours||0); } } Object.keys(weeks).sort(function(a,b){return a-b;}).forEach(function(w){ totals.appendChild(box('Sem. '+w,weeks[w].toFixed(2).replace('.',',')+' h')); }); function box(t,v){ var el=document.createElement('div'); el.className='box'; el.innerHTML='<h3>'+t+'</h3><div>'+v+'</div>'; return el; } }
+
+function updatePrintHeader(){ var phPerson=document.getElementById('phPerson'); if(phPerson) phPerson.textContent=current; var phMonth=document.getElementById('phMonth'); if(phMonth) phMonth.textContent=monthNames[currentMonth]+' '+currentYear; var phDate=document.getElementById('phDate'); if(phDate) phDate.textContent=new Date().toLocaleString('fr-FR'); }
+
+// ====== ÉDITION ======
+var mb=document.getElementById('mb'); var fType=document.getElementById('fType'), fHours=document.getElementById('fHours'), fDetail=document.getElementById('fDetail'), fNote=document.getElementById('fNote');
+function openEditor(day){ editDay=day; var d=ensureMonth(current,currentYear,currentMonth).days[day]||{type:'C',hours:'',detail:'',note:''}; document.getElementById('mTitle').textContent=String(day).padStart(2,'0')+'/'+String(currentMonth+1).padStart(2,'0')+'/'+currentYear+' — '+current; fType.value=d.type||'C'; fHours.value=(d.hours!=null?d.hours:''); fDetail.value=d.detail||''; fNote.value=d.note||''; mb.style.display='flex'; }
+function closeEditor(){ mb.style.display='none'; editDay=null; }
+var btnClose=document.getElementById('btnClose'); if(btnClose) btnClose.onclick=closeEditor;
+Array.prototype.forEach.call(document.querySelectorAll('.chip[data-preset]'), function(ch){ ch.onclick=function(){ var p=JSON.parse(ch.getAttribute('data-preset')); fType.value=p.type||'C'; fDetail.value=p.detail||''; if(p.autoHours&&p.detail){ var h=computeHoursFromDetail(p.detail); fHours.value=(isFinite(h)?h:0); } }; });
+var copyPrev=document.getElementById('copyPrev'); if(copyPrev) copyPrev.onclick=function(){ if(editDay==null) return; var prev=ensureMonth(current,currentYear,currentMonth).days[editDay-1]; if(prev){ fType.value=prev.type; fHours.value=prev.hours; fDetail.value=prev.detail||''; fNote.value=prev.note||''; } };
+var btnSave=document.getElementById('btnSave'); if(btnSave) btnSave.onclick=function(){ if(editDay==null) return; ensureMonth(current,currentYear,currentMonth).days[editDay]={type:fType.value,hours:Number(fHours.value||0),detail:fDetail.value.trim(),note:fNote.value.trim()}; saveLocal(); closeEditor(); render(); };
+var btnDel=document.getElementById('btnDel'); if(btnDel) btnDel.onclick=function(){ if(editDay==null) return; delete ensureMonth(current,currentYear,currentMonth).days[editDay]; saveLocal(); closeEditor(); render(); };
+var btnWeek=document.getElementById('btnWeek'); if(btnWeek) btnWeek.onclick=function(){ if(editDay==null) return; var dt=new Date(currentYear,currentMonth,editDay), mon=mondayOf(dt), dim=new Date(currentYear,currentMonth+1,0).getDate(); var payload={type:fType.value,hours:Number(fHours.value||0),detail:fDetail.value.trim(),note:fNote.value.trim()}; var store=ensureMonth(current,currentYear,currentMonth).days; for(var i=0;i<7;i++){ var d=mon.getDate()+i; if(d>=1&&d<=dim){ store[d]=Object.assign({},payload); } } saveLocal(); closeEditor(); render(); };
+var btnRange=document.getElementById('btnRange'); if(btnRange) btnRange.onclick=function(){ var ans=prompt('Appliquer du jour X au jour Y (ex: 5-12) :',''); if(!ans) return; var m=ans.match(/^\s*(\d{1,2})\s*[-–]\s*(\d{1,2})\s*$/); if(!m) return alert('Format invalide. Exemple : 5-12'); var a=parseInt(m[1],10), b=parseInt(m[2],10); if(a>b){ var tmp=a; a=b; b=tmp; } var dim=new Date(currentYear,currentMonth+1,0).getDate(); a=Math.max(1,Math.min(dim,a)); b=Math.max(1,Math.min(dim,b)); var payload={type:fType.value,hours:Number(fHours.value||0),detail:fDetail.value.trim(),note:fNote.value.trim()}; var store=ensureMonth(current,currentYear,currentMonth).days; for(var d=a; d<=b; d++){ store[d]=Object.assign({},payload); } saveLocal(); closeEditor(); render(); };
+
+// ====== INFO ======
+var infoBack=document.getElementById('infoBack'), infoTitle=document.getElementById('infoTitle'), infoBody=document.getElementById('infoBody'), infoClose=document.getElementById('infoClose'), infoEdit=document.getElementById('infoEdit');
 var infoDay=null;
-function openInfo(day){
-  infoDay=day;
-  var data=ensureMonth(current,currentYear,currentMonth).days[day]||null;
-  var dateStr=String(day).padStart(2,'0')+'/'+String(currentMonth+1).padStart(2,'0')+'/'+currentYear;
-  infoTitle.textContent = dateStr+' — '+current;
-  infoBody.innerHTML='';
-
-  if(!data){
-    infoBody.innerHTML = '<div>Aucune donnée pour ce jour.</div>';
-  }else{
-    var place=extractPlace(data.detail||'');
-    var mates= place ? findMates({year:currentYear, month:currentMonth, day:day, place:place, currentName: current}) : [];
-    var preciseList = (data.detail||'').match(/\d{1,2}h\d{0,2}/g) || [];
-    var precise = preciseList.length ? preciseList.join(' — ') : '—';
-
-    var band=document.createElement('div');
-    band.style.display='flex';band.style.alignItems='center';band.style.gap='10px';band.style.background='#0c1a33';band.style.border='1px solid #2a3d6d';band.style.borderRadius='12px';band.style.padding='10px 12px';
-    band.innerHTML = '<div style="font-size:22px;font-weight:900">⏰ '+precise+'</div><div style="margin-left:auto;font-weight:800;padding:6px 10px;border-radius:999px;background:'+colorOf(data.type)+'">'+data.type+' · '+(data.hours!=null?data.hours:'-')+' h</div>';
-    infoBody.appendChild(band);
-
-    var items = [
-      ['Lieu', place || '—'],
-      ['Détail', data.detail || '—'],
-      ['Note', data.note || '—'],
-      ['Avec', mates.length ? mates.join(', ') : '—']
-    ];
-    items.forEach(function(pair){
-      var k=pair[0],v=pair[1];
-      var row=document.createElement('div');
-      row.style.display='grid';row.style.gridTemplateColumns='160px 1fr';row.style.gap='8px';
-      row.innerHTML='<div style="color:#9aa3b2;font-weight:700">'+k+'</div><div>'+v+'</div>';
-      infoBody.appendChild(row);
-    });
-  }
-
-  if(infoEdit) infoEdit.style.display = (canEditAll && editing) ? 'inline-block' : 'none';
-  infoBack.style.display='flex';
-}
-if(infoClose){ infoClose.onclick=function(){infoBack.style.display='none'; infoDay=null;}; }
-if(infoBack){ infoBack.addEventListener('click',function(e){if(e.target===infoBack){infoBack.style.display='none';infoDay=null;}}); }
+function openInfo(day){ infoDay=day; var data=ensureMonth(current,currentYear,currentMonth).days[day]||null; var dateStr=String(day).padStart(2,'0')+'/'+String(currentMonth+1).padStart(2,'0')+'/'+currentYear; infoTitle.textContent=dateStr+' — '+current; infoBody.innerHTML=''; if(!data){ infoBody.innerHTML='<div>Aucune donnée pour ce jour.</div>'; } else { var place=extractPlace(data.detail||''); var mates=place? findMates({year:currentYear,month:currentMonth,day:day,place:place,currentName:current}) : []; var preciseList=(data.detail||'').match(/\d{1,2}h\d{0,2}/g)||[]; var precise=preciseList.length? preciseList.join(' — ') : '—'; var band=document.createElement('div'); band.style.display='flex'; band.style.alignItems='center'; band.style.gap='10px'; band.style.background='#0c1a33'; band.style.border='1px solid #2a3d6d'; band.style.borderRadius='12px'; band.style.padding='10px 12px'; band.innerHTML='<div style="font-size:22px;font-weight:900">⏰ '+precise+'</div><div style="margin-left:auto;font-weight:800;padding:6px 10px;border-radius:999px;background:'+colorOf(data.type)+'">'+data.type+' · '+(data.hours!=null?data.hours:'-')+' h</div>'; infoBody.appendChild(band); var items=[["Lieu",place||'—'],["Détail",data.detail||'—'],["Note",data.note||'—'],["Avec",mates.length?mates.join(', '):'—']]; items.forEach(function(pair){ var k=pair[0],v=pair[1]; var row=document.createElement('div'); row.style.display='grid'; row.style.gridTemplateColumns='160px 1fr'; row.style.gap='8px'; row.innerHTML='<div style="color:#9aa3b2;font-weight:700">'+k+'</div><div>'+v+'</div>'; infoBody.appendChild(row); }); } if(infoEdit) infoEdit.style.display = editing? 'inline-block' : 'none'; infoBack.style.display='flex'; }
+if(infoClose){ infoClose.onclick=function(){ infoBack.style.display='none'; infoDay=null; }; }
+if(infoBack){ infoBack.addEventListener('click',function(e){ if(e.target===infoBack){ infoBack.style.display='none'; infoDay=null; } }); }
 if(infoEdit){ infoEdit.onclick=function(){ if(infoDay!=null){ infoBack.style.display='none'; openEditor(infoDay); } }; }
 
-/* ===== Mois ===== */
-var mpb=document.getElementById('mpb'),monthGrid=document.getElementById('monthGrid'),curYearEl=document.getElementById('curYear');
+// ====== Mois ======
+var mpb=document.getElementById('mpb'), monthGrid=document.getElementById('monthGrid'), curYearEl=document.getElementById('curYear');
 var monthLabelEl=document.getElementById('monthLabel');
-if(monthLabelEl){
-  monthLabelEl.onclick=function(){
-    curYearEl.textContent=currentYear;
-    monthGrid.innerHTML='';
-    monthNames.forEach(function(n,i){
-      var b=document.createElement('button');b.textContent=n[0].toUpperCase()+n.slice(1);
-      b.onclick=function(){currentMonth=i;mpb.style.display='none';saveLocal();cloudSave().catch(function(){});render();};
-      monthGrid.appendChild(b);
-    });
-    mpb.style.display='flex';
-  };
-}
-var mpClose=document.getElementById('mpClose'); if(mpClose){ mpClose.onclick=function(){mpb.style.display='none';}; }
+if(monthLabelEl){ monthLabelEl.onclick=function(){ curYearEl.textContent=currentYear; monthGrid.innerHTML=''; monthNames.forEach(function(n,i){ var b=document.createElement('button'); b.textContent=n[0].toUpperCase()+n.slice(1); b.onclick=function(){ currentMonth=i; mpb.style.display='none'; saveLocal(); render(); }; monthGrid.appendChild(b); }); mpb.style.display='flex'; }; }
+var mpClose=document.getElementById('mpClose'); if(mpClose){ mpClose.onclick=function(){ mpb.style.display='none'; }; }
 if(mpb){ mpb.addEventListener('click',function(e){ if(e.target===mpb){ mpb.style.display='none'; } }); }
 
-/* ===== People manager ===== */
+// ====== People manager ======
 var peopleModal=document.getElementById('peopleModal');
 var pmList=document.getElementById('pmList');
 var pmAdd=document.getElementById('pmAdd');
 var pmSave=document.getElementById('pmSave');
 var pmCancel=document.getElementById('pmCancel');
-
 var btnPeople=document.getElementById('btnPeople');
-if(btnPeople){
-  btnPeople.onclick=function(){
-    if(!canEditAll) return;
-    pmList.innerHTML='';
-    people.forEach(function(name,idx){
-      var row=document.createElement('div');
-      row.style.display='grid';row.style.gridTemplateColumns='1fr auto';row.style.gap='8px';row.style.margin='6px 0';
-      row.innerHTML='<input value="'+name+'" data-idx="'+idx+'"/> <button class="danger" data-del="'+idx+'">Supprimer</button>';
-      pmList.appendChild(row);
-    });
-    // gestion suppression
-    pmList.onclick=function(e){
-      var d=e.target && e.target.getAttribute('data-del');
-      if(d!=null){ var i=parseInt(d,10); people.splice(i,1); btnPeople.click(); }
-    };
-    peopleModal.style.display='flex';
-  };
-}
+if(btnPeople){ btnPeople.onclick=function(){ pmList.innerHTML=''; people.forEach(function(name,idx){ var row=document.createElement('div'); row.style.display='grid'; row.style.gridTemplateColumns='1fr auto'; row.style.gap='8px'; row.style.margin='6px 0'; row.innerHTML='<input value="'+name+'" data-idx="'+idx+'"/> <button class="danger" data-del="'+idx+'">Supprimer</button>'; pmList.appendChild(row); }); pmList.onclick=function(e){ var d=e.target && e.target.getAttribute('data-del'); if(d!=null){ var i=parseInt(d,10); people.splice(i,1); btnPeople.click(); } }; peopleModal.style.display='flex'; }; }
 if(pmAdd){ pmAdd.onclick=function(){ var newName=prompt('Nouveau nom :'); if(!newName) return; if(people.indexOf(newName)===-1) people.push(newName); ensureMonth(newName,currentYear,currentMonth); if(btnPeople) btnPeople.click(); }; }
-if(pmSave){ pmSave.onclick=async function(){ 
-  var inputs=[].slice.call(pmList.querySelectorAll('input[data-idx]'));
-  var newPeople=inputs.map(function(i){return i.value.trim();}).filter(Boolean);
-  if(!newPeople.length) return alert('La liste ne peut pas être vide.');
-  people=Array.from(new Set(newPeople));
-  saveLocal();
-  try{await cloudSave();}catch(e){}
-  peopleModal.style.display='none';
-  renderSidebar();
-  render();
-  showToast('Noms mis à jour');
-}; }
+if(pmSave){ pmSave.onclick=function(){ var inputs=[].slice.call(pmList.querySelectorAll('input[data-idx]')); var newPeople=inputs.map(function(i){return i.value.trim();}).filter(Boolean); if(!newPeople.length) return alert('La liste ne peut pas être vide.'); people=Array.from(new Set(newPeople)); saveLocal(); peopleModal.style.display='none'; renderSidebar(); render(); showToast('Noms mis à jour'); }; }
 if(pmCancel){ pmCancel.onclick=function(){ peopleModal.style.display='none'; }; }
 
-/* ===== Toolbar actions ===== */
-var btnEdit=document.getElementById('btnEdit');
-if(btnEdit){ btnEdit.onclick=function(){ if(!canEditAll) return; editing=!editing; btnEdit.textContent = editing? 'Désactiver l\'édition' : 'Activer l\'édition'; render(); }; }
+// ====== Toolbar ======
+var btnEdit=document.getElementById('btnEdit'); if(btnEdit){ btnEdit.onclick=function(){ editing=!editing; btnEdit.textContent = editing? 'Désactiver l\'édition' : 'Activer l\'édition'; render(); }; }
 var btnPdf=document.getElementById('btnPdf'); if(btnPdf){ btnPdf.onclick=function(){ updatePrintHeader(); window.print(); }; }
-var btnSaveAll=document.getElementById('btnSaveAll'); if(btnSaveAll){ btnSaveAll.onclick=function(){ saveLocal(); cloudSave().catch(function(){}); showToast('Enregistré ✅'); }; }
+var btnSaveAll=document.getElementById('btnSaveAll'); if(btnSaveAll){ btnSaveAll.onclick=function(){ saveLocal(); showToast('Enregistré ✅'); }; }
 var btnBackup=document.getElementById('btnBackup'); if(btnBackup){ btnBackup.onclick=function(){ var blob=new Blob([JSON.stringify({people:people,peopleData:peopleData},null,2)],{type:'application/json'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='planning_backup_'+Date.now()+'.json'; a.click(); URL.revokeObjectURL(a.href); }; }
-var btnImport=document.getElementById('btnImport'); var fileImport=document.getElementById('fileImport');
-if(btnImport && fileImport){ btnImport.onclick=function(){ fileImport.click(); }; fileImport.onchange=function(){ var f=fileImport.files[0]; if(!f) return; var rd=new FileReader(); rd.onload=function(){ try{ var data=JSON.parse(rd.result); if(data.people) people=data.people; if(data.peopleData) peopleData=data.peopleData; saveLocal(); cloudSave().catch(function(){}); renderSidebar(); render(); showToast('Import réussi'); }catch(e){ alert('Fichier invalide'); } }; rd.readAsText(f); }; }
-var btnCloudTest=document.getElementById('btnCloudTest'); if(btnCloudTest){ btnCloudTest.onclick=async function(){ var ok=await cloudLoad(); if(ok){ renderSidebar(); render(); showToast('Cloud OK'); } else { showToast('Rien sur le cloud'); } }; }
+var btnImport=document.getElementById('btnImport'); var fileImport=document.getElementById('fileImport'); if(btnImport && fileImport){ btnImport.onclick=function(){ fileImport.click(); }; fileImport.onchange=function(){ var f=fileImport.files[0]; if(!f) return; var rd=new FileReader(); rd.onload=function(){ try{ var data=JSON.parse(rd.result); if(data.people) people=data.people; if(data.peopleData) peopleData=data.peopleData; saveLocal(); renderSidebar(); render(); showToast('Import réussi'); }catch(e){ alert('Fichier invalide'); } }; rd.readAsText(f); }; }
 
-/* ===== Drawer mobile ===== */
-var overlay=document.getElementById('overlay');
-var menuBtn=document.getElementById('menuBtn');
-function openMenu(){ document.body.classList.add('menu-open'); document.querySelector('.side.drawer').classList.add('open'); overlay.style.display='block'; }
-function closeMenu(){ document.body.classList.remove('menu-open'); document.querySelector('.side.drawer').classList.remove('open'); overlay.style.display='none'; }
-if(menuBtn){ menuBtn.onclick=openMenu; }
-if(overlay){ overlay.onclick=closeMenu; }
+// ====== Tests rapides (non intrusifs) ======
+(function runDevTests(){ try{ console.info('[Tests] start'); console.assert(extractPlace('Colline 7h/12h')==='Colline','extract Colline'); console.assert(extractPlace(' promenade 9h/15h ').toLowerCase()==='promenade','extract promenade'); console.assert(computeHoursFromDetail('7h/12h - 13h30/21h30')===13,'hours 13'); var ppl=['A','B','C']; var pdata={ A:{2025:{7:{days:{1:{detail:'Colline 7h/12h',type:'C',hours:5}}}}}, B:{2025:{7:{days:{1:{detail:'colline 9h/12h',type:'C',hours:3}}}}}, C:{2025:{7:{days:{1:{detail:'Promenade 7h/12h',type:'P',hours:5}}}}} }; function matesStandalone(o){ var r=[]; for(var i=0;i<ppl.length;i++){ var n=ppl[i]; if(n===o.currentName) continue; var st=pdata[n]&&pdata[n][o.year]&&pdata[n][o.year][o.month]; var inf=st&&st.days&&st.days[o.day]; if(!inf) continue; var pl=extractPlace(inf.detail||''); if(pl && pl.toLowerCase()===o.place.toLowerCase()) r.push(n);} return r; } var r1=matesStandalone({year:2025,month:7,day:1,place:'Colline',currentName:'A'}); console.assert(JSON.stringify(r1)===JSON.stringify(['B']),'mates [B]'); console.info('[Tests] ok'); }catch(e){ console.warn('[Tests] fail',e); } })();
 
-/* ===== Boot ===== */
-(async function init(){
-  // mois/année actuels par défaut (Europe/Paris)
-  var now=new Date(); currentYear=now.getFullYear(); currentMonth=now.getMonth();
-  loadLocal();
-  await cloudLoad();
-  seedDefaultsIfEmpty();
-  renderHome();
-  // Access direct auto pour test local
-  // enterApp('Sabri'); // décommenter si vous voulez entrer directement
-})();
+// ====== BOOT ======
+(function init(){ loadLocal(); seedDefaultsIfEmpty(); renderSidebar(); render(); })();
 </script>
 </body>
 </html>
