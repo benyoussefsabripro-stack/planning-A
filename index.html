@@ -264,13 +264,13 @@ window.addEventListener('unhandledrejection', function(e){
 });
 
 // ====== ÉTAT GLOBAL (pas d'auth, tout en local) ======
-var current = 'Sabri';
+var current = 'Momo'; // Démarrage demandé: Momo
 var now = new Date();
 var currentYear = now.getFullYear();
 var currentMonth = now.getMonth();
 var editing = false, editDay = null;
 var people = ['Momo','Lucas','Sabri','Sofiane','Hamid','Adama','Iddir','Karim','Azeddine'];
-var peopleData = {};
+var peopleData = {}; // Pas de seed: données vides par défaut
 var monthNames = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 
 // ====== HELPERS ======
@@ -287,11 +287,9 @@ function findMates(opts){ var year=opts.year,month=opts.month,day=opts.day,place
 
 // ====== LOCALSTORAGE ======
 var STORAGE_KEY='planning_simple_v1';
-function saveLocal(){ var data={people:people,peopleData:peopleData,current:current,currentYear:currentYear,currentMonth:currentMonth}; localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
-function loadLocal(){ try{ var s=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null'); if(!s) return false; people=s.people||people; Object.assign(peopleData, s.peopleData||{}); current=s.current||current; currentYear=s.currentYear||currentYear; currentMonth=s.currentMonth||currentMonth; return true; }catch(e){ return false; } }
-
-// ====== SEED (exemple Sabri août 2025) ======
-function seedDefaultsIfEmpty(){ var has=peopleData['Sabri'] && peopleData['Sabri'][2025] && peopleData['Sabri'][2025][7]; if(!has){ ensureMonth('Sabri',2025,7).days={ 1:{type:'C',hours:11,detail:'Colline 7h–12 / 13h30–21h30',note:'Fin 21h'}, 4:{type:'G',hours:8.5,detail:'Grande Arche 7h30–12 / 13h30–21h'}, 6:{type:'R',hours:3.5,detail:'Ronde',note:'Fin 21h'}, 7:{type:'G',hours:8.5,detail:'Grande Arche 7h30–12 / 13h30–21h'}, 8:{type:'G',hours:8.5,detail:'Grande Arche 7h30–12 / 13h30–21h'}, 11:{type:'C',hours:11,detail:'Colline 7h–12 / 13h30–21h30',note:'Fin 19h'}, 12:{type:'C',hours:11,detail:'Colline 7h–12 / 13h30–21h30'}, 14:{type:'C',hours:11,detail:'Colline 7h–12 / 13h30–21h30',note:'Fin 19h'}, 19:{type:'P',hours:13,detail:'Promenade 7h–13h30 / 15h–21h30'}, 20:{type:'C',hours:13,detail:'Colline 7h–12 / 13h30–21h30'}, 22:{type:'C',hours:13,detail:'Colline 7h–12 / 13h30–21h30'}, 26:{type:'C',hours:13,detail:'Colline 7h–12 / 13h30–21h30'}, 27:{type:'P',hours:13,detail:'Promenade 7h–13h30 / 15h–21h30'}, 29:{type:'C',hours:13,detail:'Colline 7h–12 / 13h30–21h30'} }; } }
+function saveLocal(){ var data={people:people,peopleData:peopleData,current:current,currentYear:currentYear,currentMonth:currentMonth}; try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }catch(e){ console.warn('localStorage save failed', e); } }
+function loadLocal(){ try{ var s=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null'); if(!s) return false; people=s.people||people; Object.assign(peopleData, s.peopleData||{}); // On force quand même l'arrivée sur Momo
+ current='Momo'; currentYear=s.currentYear||currentYear; currentMonth=s.currentMonth||currentMonth; return true; }catch(e){ return false; } }
 
 // ====== RENDER ======
 var peopleEl=document.getElementById('people');
@@ -350,10 +348,31 @@ var btnBackup=document.getElementById('btnBackup'); if(btnBackup){ btnBackup.onc
 var btnImport=document.getElementById('btnImport'); var fileImport=document.getElementById('fileImport'); if(btnImport && fileImport){ btnImport.onclick=function(){ fileImport.click(); }; fileImport.onchange=function(){ var f=fileImport.files[0]; if(!f) return; var rd=new FileReader(); rd.onload=function(){ try{ var data=JSON.parse(rd.result); if(data.people) people=data.people; if(data.peopleData) peopleData=data.peopleData; saveLocal(); renderSidebar(); render(); showToast('Import réussi'); }catch(e){ alert('Fichier invalide'); } }; rd.readAsText(f); }; }
 
 // ====== Tests rapides (non intrusifs) ======
-(function runDevTests(){ try{ console.info('[Tests] start'); console.assert(extractPlace('Colline 7h/12h')==='Colline','extract Colline'); console.assert(extractPlace(' promenade 9h/15h ').toLowerCase()==='promenade','extract promenade'); console.assert(computeHoursFromDetail('7h/12h - 13h30/21h30')===13,'hours 13'); var ppl=['A','B','C']; var pdata={ A:{2025:{7:{days:{1:{detail:'Colline 7h/12h',type:'C',hours:5}}}}}, B:{2025:{7:{days:{1:{detail:'colline 9h/12h',type:'C',hours:3}}}}}, C:{2025:{7:{days:{1:{detail:'Promenade 7h/12h',type:'P',hours:5}}}}} }; function matesStandalone(o){ var r=[]; for(var i=0;i<ppl.length;i++){ var n=ppl[i]; if(n===o.currentName) continue; var st=pdata[n]&&pdata[n][o.year]&&pdata[n][o.year][o.month]; var inf=st&&st.days&&st.days[o.day]; if(!inf) continue; var pl=extractPlace(inf.detail||''); if(pl && pl.toLowerCase()===o.place.toLowerCase()) r.push(n);} return r; } var r1=matesStandalone({year:2025,month:7,day:1,place:'Colline',currentName:'A'}); console.assert(JSON.stringify(r1)===JSON.stringify(['B']),'mates [B]'); console.info('[Tests] ok'); }catch(e){ console.warn('[Tests] fail',e); } })();
+(function runDevTests(){ try{ console.info('[Tests] start');
+  // Helpers
+  console.assert(extractPlace('Colline 7h/12h')==='Colline','extract Colline');
+  console.assert(extractPlace(' promenade 9h/15h ').toLowerCase()==='promenade','extract promenade');
+  console.assert(extractPlace('grande arche 7h30/12h').toLowerCase().includes('arche'),'extract Grande Arche');
+  console.assert(parseTimeToHours('7h')===7,'parse 7h');
+  console.assert(parseTimeToHours('13h30')===13.5,'parse 13h30');
+  console.assert(computeHoursFromDetail('7h/12h - 13h30/21h30')===13,'hours 13');
+  console.assert(typeof renderSidebar==='function','renderSidebar defined');
+  console.assert(typeof render==='function','render defined');
+  // ensureMonth shape
+  var mstore=ensureMonth('Test',2025,7); console.assert(mstore && mstore.days && typeof mstore.days==='object','ensureMonth days object');
+  // mates test
+  var ppl=['A','B','C'];
+  var pdata={ A:{2025:{7:{days:{1:{detail:'Colline 7h/12h',type:'C',hours:5}}}}}, B:{2025:{7:{days:{1:{detail:'colline 9h/12h',type:'C',hours:3}}}}}, C:{2025:{7:{days:{1:{detail:'Promenade 7h/12h',type:'P',hours:5}}}}} };
+  function matesStandalone(o){ var r=[]; for(var i=0;i<ppl.length;i++){ var n=ppl[i]; if(n===o.currentName) continue; var st=pdata[n]&&pdata[n][o.year]&&pdata[n][o.year][o.month]; var inf=st&&st.days&&st.days[o.day]; if(!inf) continue; var pl=extractPlace(inf.detail||''); if(pl && pl.toLowerCase()===o.place.toLowerCase()) r.push(n);} return r; }
+  var r1=matesStandalone({year:2025,month:7,day:1,place:'Colline',currentName:'A'}); console.assert(JSON.stringify(r1)===JSON.stringify(['B']),'mates [B]');
+  console.info('[Tests] ok'); }catch(e){ console.warn('[Tests] fail',e); } })();
 
 // ====== BOOT ======
-(function init(){ loadLocal(); seedDefaultsIfEmpty(); renderSidebar(); render(); })();
+(function init(){
+  loadLocal(); // charge si dispo, mais garde Momo comme personne courante
+  renderSidebar();
+  render();
+})();
 </script>
 </body>
 </html>
