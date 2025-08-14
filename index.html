@@ -183,7 +183,7 @@
       <div class="home-grid" id="homeGrid"></div>
     </div>
 
-    <p style="margin-top:10px;color:#9aa3b2;font-size:12px">Mots de passe : Momo=<b>1</b>, Lucas=<b>2</b>, Sabri=<b>3</b>, Sofiane=<b>4</b>, Hamid=<b>5</b>, Adama=<b>6</b>, Iddir=<b>7</b>, Karim=<b>8</b>. Admin global = <b>securite</b>.</p>
+    <p style="margin-top:10px;color:#9aa3b2;font-size:12px">Mots de passe : Momo=<b>1</b>, Lucas=<b>2</b>, Sabri=<b>3</b>, Sofiane=<b>4</b>, Hamid=<b>5</b>, Adama=<b>6</b>, Iddir=<b>7</b>, Karim=<b>8</b>, Azeddine=<b>9</b>. Admin global = <b>securite</b>.</p>
   </div>
 </section>
 
@@ -332,13 +332,11 @@
 <script>
 /* ========== DIAGNOSTIC GLOBAL (montre l’erreur si quelque chose casse) ========== */
 window.addEventListener('error', function(e){
-  try{ console.error('JS error:', e.error || e.message || e); }catch(_){}
-  alert('Erreur JS: ' + (e.message || e.error));
-});
+  try{ console.error('JS error:', e.error || e.message || e); }catch(_){}}
+);
 window.addEventListener('unhandledrejection', function(e){
-  try{ console.error('Promise rejection:', e.reason); }catch(_){}
-  alert('Erreur asynchrone: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
-});
+  try{ console.error('Promise rejection:', e.reason); }catch(_){}}
+);
 
 /* ====== Firebase init ====== */
 var firebaseConfig = {
@@ -357,24 +355,26 @@ var CLOUD_PATH = "mbgardiennage/ieseg";
 
 /* ===== RÔLES & ACCÈS ===== */
 var ADMIN_PASS="securite";
-var PERSON_PASSES={Momo:"1",Lucas:"2",Sabri:"3",Sofiane:"4",Hamid:"5",Adama:"6",Iddir:"7",Karim:"8"};
+var PERSON_PASSES={Momo:"1",Lucas:"2",Sabri:"3",Sofiane:"4",Hamid:"5",Adama:"6",Iddir:"7",Karim:"8",Azeddine:"9"};
 var authRole=null,authUser=null;
 var canEditAll=false, canViewAll=false;
 
 /* ===== ÉTAT ===== */
-var current="Sabri",currentYear=2025,currentMonth=7,editing=false,editDay=null;
-var people=["Momo","Lucas","Sabri","Sofiane","Hamid","Adama","Iddir","Karim"];
+var current="Sabri",currentYear=new Date().getFullYear(),currentMonth=new Date().getMonth(),editing=false,editDay=null;
+var people=["Momo","Lucas","Sabri","Sofiane","Hamid","Adama","Iddir","Karim","Azeddine"];
 var peopleData={};
 var monthNames=["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
 
 /* ===== HELPERS ===== */
 function ensureMonth(name,y,m){if(!peopleData[name])peopleData[name]={};if(!peopleData[name][y])peopleData[name][y]={};if(!peopleData[name][y][m])peopleData[name][y][m]={days:{}};return peopleData[name][y][m];}
 function colorOf(t){return ({C:'var(--c)',P:'var(--p)',G:'var(--g)',R:'var(--r)'}[t]||'#999');}
-function weekNumber(dt){var t=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate()));var d=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-d);var y0=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil((((t-y0)/86400000)+1)/7);}
+function weekNumber(dt){var t=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate()));var d=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-d);var y0=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil((((t-y0)/86400000)+1)/7);} 
 function mondayOf(dt){var d=(dt.getDay()+6)%7;var m=new Date(dt);m.setDate(dt.getDate()-d);return m;}
-function parseTimeToHours(t){var m=t.match(/^(\d{1,2})h(?:(\d{2}))?$/i);if(!m)return null;var H=parseInt(m[1],10),M=parseInt(m[2]||"0",10);return H+(M/60);}
+function parseTimeToHours(t){var m=t.match(/^(\d{1,2})h(?:(\d{2}))?$/i);if(!m)return null;var H=parseInt(m[1],10),M=parseInt(m[2]||"0",10);return H+(M/60);} 
 function computeHoursFromDetail(detail){var times=(detail.match(/\d{1,2}h\d{0,2}/g)||[]).map(parseTimeToHours).filter(function(v){return v!=null;});var s=0;for(var i=0;i+1<times.length;i+=2)s+=times[i+1]-times[i];return Math.round(s*2)/2;}
-function showToast(t){var el=document.getElementById('toast');el.textContent=t||"OK";el.style.display='block';setTimeout(function(){el.style.display='none';},1500);}
+function parseTimeToHours(t){var m=t.match(/^(\d{1,2})h(?:(\d{2}))?$/i);if(!m)return null;var H=parseInt(m[1],10),M=parseInt(m[2]||"0",10);return H+(M/60);} 
+function computeHoursFromDetail(detail){var times=(detail.match(/\d{1,2}h\d{0,2}/g)||[]).map(parseTimeToHours).filter(function(v){return v!=null;});var s=0;for(var i=0;i+1<times.length;i+=2)s+=times[i+1]-times[i];return Math.round(s*2)/2;}
+function showToast(t){var el=document.getElementById('toast');el.textContent=t||"OK";el.style.display='block';setTimeout(function(){el.style.display='none';},1500);} 
 
 /* ===== STOCKAGE local ===== */
 var STORAGE_KEY="planning_secure_v2";
@@ -540,7 +540,7 @@ function renderSidebar(){
   if(!peopleEl) return;
   peopleEl.innerHTML='';
   var list=(canViewAll||canEditAll)?people:(authUser?[authUser]:[]);
-  var colors=['#9bd0ff','#ffd28a','#8ec5ff','#c4f6c1','#ffb4b4','#d7c7ff','#ffe69b','#a0e9dd'];
+  var colors=['#9bd0ff','#ffd28a','#8ec5ff','#c4f6c1','#ffb4b4','#d7c7ff','#ffe69b','#a0e9dd','#fbd1ff'];
   for(var i=0;i<list.length;i++){
     (function(name,idx){
       var el=document.createElement('div');el.className='person'+(name===current?' active':'');
@@ -578,7 +578,7 @@ function render(){
 
       var place=extractPlace(info.detail||"");
       if(place){
-        var mates=findMates({year:currentYear,month:currentMonth,day:day,place:place,currentName=current});
+        var mates=findMates({year:currentYear,month:currentMonth,day:day,place:place,currentName: current});
         if(mates.length){
           var mEl=document.createElement('div');mEl.className='mates';
           mEl.textContent='Avec : '+mates.join(', ');
@@ -587,7 +587,7 @@ function render(){
       }
     }else if(editing&&canEditAll){
       var plus=document.createElement('div');plus.className='pill';plus.style.background='#27406f';plus.textContent='+ Ajouter';plus.style.color='#fff';plus.style.marginTop='22px';card.appendChild(plus);
-      plus.onclick=function(ev){ ev.stopPropagation(); openEditor(day); };
+      plus.onclick=(function(d){return function(ev){ ev.stopPropagation(); openEditor(d); };})(day);
     }
 
     card.onclick=(function(d){ return function(){ openInfo(d); }; })(day);
@@ -604,6 +604,13 @@ function renderTotals(days){
   for(var d=1;d<=dim;d++){if(days[d]){var w=weekNumber(new Date(currentYear,currentMonth,d));weeks[w]=(weeks[w]||0)+Number(days[d].hours||0);}}
   Object.keys(weeks).sort(function(a,b){return a-b;}).forEach(function(w){totals.appendChild(box('Sem. '+w,weeks[w].toFixed(2).replace('.',',')+' h'));});
   function box(t,v){var el=document.createElement('div');el.className='box';el.innerHTML='<h3>'+t+'</h3><div>'+v+'</div>';return el;}
+}
+
+/* ===== Impression ===== */
+function updatePrintHeader(){
+  var phPerson=document.getElementById('phPerson'); if(phPerson) phPerson.textContent=current;
+  var phMonth=document.getElementById('phMonth'); if(phMonth) phMonth.textContent=monthNames[currentMonth]+" "+currentYear;
+  var phDate=document.getElementById('phDate'); if(phDate) phDate.textContent=new Date().toLocaleString('fr-FR');
 }
 
 /* ===== Modale édition ===== */
@@ -642,7 +649,7 @@ var btnRange=document.getElementById('btnRange'); if(btnRange) btnRange.onclick=
   if(a>b){ var tmp=a; a=b; b=tmp; } /* swap robuste */
   var dim=new Date(currentYear,currentMonth+1,0).getDate();a=Math.max(1,Math.min(dim,a));b=Math.max(1,Math.min(dim,b));
   var payload={type:fType.value,hours:Number(fHours.value||0),detail:fDetail.value.trim(),note:fNote.value.trim()};
-  var store=ensureMonth(current,currentYear,currentMonth).days;for(var d=a;d<=b;d++){store[d]=Object.assign({},payload);}
+  var store=ensureMonth(current,currentYear,currentMonth).days;for(var d=a;d<=b;d++){store[d]=Object.assign({},payload);} 
   saveLocal(); try{await cloudSave();}catch(e){}
   closeEditor();render();
 };
@@ -716,20 +723,3 @@ var pmList=document.getElementById('pmList');
 var pmAdd=document.getElementById('pmAdd');
 var pmSave=document.getElementById('pmSave');
 var pmCancel=document.getElementById('pmCancel');
-
-var btnPeople=document.getElementById('btnPeople');
-if(btnPeople){
-  btnPeople.onclick=function(){
-    if(!canEditAll) return;
-    pmList.innerHTML='';
-    people.forEach(function(name,idx){
-      var row=document.createElement('div');
-      row.style.display='grid';row.style.gridTemplateColumns='1fr auto';row.style.gap='8px';row.style.margin='6px 0';
-      row.innerHTML='<input value="'+name+'" data-idx="'+idx+'"/> <button class="danger" data-del="'+idx+'">Supprimer</button>';
-      pmList.appendChild(row);
-    });
-    peopleModal.style.display='flex';
-  };
-}
-if(pmAdd){ pmAdd.onclick=function(){ var newName=prompt('Nouveau nom :'); if(!newName) return; if(people.indexOf(newName)===-1) people.push(newName); ensureMonth(newName,currentYear,currentMonth); if(btnPeople) btnPeople.click(); }; }
-if(pmSave){ pmSave.onclick=async function(){ var inputs=[].slice.call(pmList.querySelectorAll('input[data-idx]')); var newPeople=inputs.map(function(i){return i.value.trim();}).filter(Boolean); if(!newPeople.length) return alert('La liste ne peut pas être vide.'); people=Array.from(new Set(newPeople)); saveLocal(); try{await cloudSave
