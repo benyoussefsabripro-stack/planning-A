@@ -82,6 +82,10 @@
 
   .toast{position:fixed;right:18px;bottom:18px;background:#111827;color:#fff;padding:10px 14px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.2);display:none;z-index:50}
 
+  /* Edit mode badge */
+  .edit-badge{position:fixed;right:18px;top:12px;background:#111827;color:#fff;border:1px solid #2a3d6d;border-radius:999px;padding:8px 12px;font-weight:900;box-shadow:var(--shadow);display:none;z-index:60}
+  .edit-badge .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;margin-right:8px;box-shadow:0 0 0 3px rgba(16,185,129,.25)}
+
   /* Print */
   @page { size: A4 landscape; margin: 10mm; }
   * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
@@ -98,7 +102,7 @@
   #printHeader .ph-r{background:#8b5cf6}
   @media print {
     html,body { background:#fff; color:#111; }
-    .side, header .toolbar, #menuBtn, .modal-back, .toast { display:none !important; }
+    .side, header .toolbar, #menuBtn, .modal-back, .toast, .edit-badge { display:none !important; }
     #printHeader { display:block !important; }
     .wrap { max-width: none; padding:0; margin:0; }
     .calendar { grid-template-columns: repeat(7, 1fr) !important; gap: 6px !important; }
@@ -142,8 +146,11 @@
         <button id="btnBackup">Export JSON</button>
         <button id="btnImport">Import JSON</button>
         <input type="file" id="fileImport" accept="application/json" hidden>
+        <button id="btnReset" class="danger">Tout effacer</button>
       </div>
     </header>
+
+    <div id="editBadge" class="edit-badge" aria-live="polite"><span class="dot"></span>Édition activée</div>
 
     <div class="wrap">
       <div id="printHeader" style="display:none">
@@ -328,6 +335,7 @@ if(btnGeneral){ btnGeneral.onclick=function(){ current=GENERAL_KEY; document.que
 function isGeneral(){ return current===GENERAL_KEY; }
 
 function render(){
+  updateEditBadge();
   var who=document.getElementById('who');
   if(who) who.textContent = isGeneral()? 'Planning générale' : current;
   var monthLabel=document.getElementById('monthLabel'); if(monthLabel) monthLabel.textContent=monthNames[currentMonth]+' '+currentYear;
@@ -369,7 +377,7 @@ function render(){
     var card=document.createElement('div'); card.className='card'; card.setAttribute('data-day',day);
     var dd=document.createElement('div'); dd.className='date'; dd.textContent=String(day).padStart(2,'0'); card.appendChild(dd);
     var info=days[day];
-    if(info){ card.classList.add('work'); var pill=document.createElement('div'); pill.className='pill'; pill.setAttribute('data-type',info.type); pill.style.background=colorOf(info.type); pill.innerHTML='<span>'+info.type+'</span> <small>'+String(info.hours).replace('.',',')+' h</small>'; pill.title=info.detail||''; card.appendChild(pill); if(info.note){ var n=document.createElement('div'); n.className='note'; n.textContent=info.note; card.appendChild(n); } var place=extractPlace(info.detail||''); if(place){ var mates=findMates({year:currentYear,month:currentMonth,day:day,place:place,currentName:current}); if(mates.length){ var mEl=document.createElement('div'); mEl.className='mates'; mEl.textContent='Avec : '+mates.join(', '); card.appendChild(mEl); } } } else if(editing){ var plus=document.createElement('div'); plus.className='pill'; plus.style.background='#27406f'; plus.style.color='#fff'; plus.style.marginTop='22px'; plus.textContent='+ Ajouter'; plus.onclick=(function(d){ return function(ev){ ev.stopPropagation(); openEditor(d); }; })(day); card.appendChild(plus); }
+    if(info){ card.classList.add('work'); var pill=document.createElement('div'); pill.className='pill'; pill.setAttribute('data-type',info.type); pill.style.background=colorOf(info.type); pill.innerHTML='<span>'+info.type+'</span> <small>'+String(info.hours).replace('.',',')+' h</small>'; pill.title=info.detail||''; card.appendChild(pill); if(info.note){ var n=document.createElement('div'); n.className='note'; n.textContent=info.note; card.appendChild(n); } var place=extractPlace(info.detail||''); if(place){ var mates=findMates({year:currentYear,month:currentMonth,day:day,place:place,currentName:current}); if(mates.length){ var mEl=document.createElement('div'); mEl.className='mates'; mEl.textContent='Avec : '+mates.join(', '); card.appendChild(mEl); } } } else if(editing){ var plus=document.createElement('div'); plus.className='pill'; plus.style.background='#27406f'; plus.style.color='#fff'; plus.textContent='+ Ajouter'; plus.onclick=(function(d){ return function(ev){ ev.stopPropagation(); openEditor(d); }; })(day); card.appendChild(plus); }
     card.onclick=(function(d){ return function(){ openInfo(d); }; })(day);
     cal.appendChild(card);
   }
@@ -392,6 +400,8 @@ function renderTotalsGeneral(){ var totals=document.getElementById('totals'); if
 }
 
 function updatePrintHeader(){ var phPerson=document.getElementById('phPerson'); if(phPerson) phPerson.textContent = isGeneral()? 'Planning générale' : current; var phMonth=document.getElementById('phMonth'); if(phMonth) phMonth.textContent=monthNames[currentMonth]+' '+currentYear; var phDate=document.getElementById('phDate'); if(phDate) phDate.textContent=new Date().toLocaleString('fr-FR'); }
+
+function updateEditBadge(){ var b=document.getElementById('editBadge'); if(!b) return; b.style.display = (editing && !isGeneral()) ? 'block' : 'none'; }
 
 // ====== ÉDITION ======
 var mb=document.getElementById('mb'); var fType=document.getElementById('fType'), fHours=document.getElementById('fHours'), fDetail=document.getElementById('fDetail'), fNote=document.getElementById('fNote');
@@ -437,34 +447,94 @@ if(pmSave){ pmSave.onclick=function(){ var inputs=[].slice.call(pmList.querySele
 if(pmCancel){ pmCancel.onclick=function(){ peopleModal.style.display='none'; }; }
 
 // ====== Toolbar ======
-var btnEdit=document.getElementById('btnEdit'); if(btnEdit){ btnEdit.onclick=function(){ if(isGeneral()){ showToast('Édition indisponible en vue générale'); return; } editing=!editing; btnEdit.textContent = editing? 'Désactiver l\'édition' : 'Activer l\'édition'; render(); }; }
+var btnEdit=document.getElementById('btnEdit'); if(btnEdit){ btnEdit.onclick=function(){ if(isGeneral()){ showToast('Édition indisponible en vue générale'); return; } editing=!editing; btnEdit.textContent = editing ? "Désactiver l’édition" : "Activer l’édition"; render(); }; }
 var btnPdf=document.getElementById('btnPdf'); if(btnPdf){ btnPdf.onclick=function(){ updatePrintHeader(); window.print(); }; }
 var btnSaveAll=document.getElementById('btnSaveAll'); if(btnSaveAll){ btnSaveAll.onclick=function(){ saveLocal(); showToast('Enregistré ✅'); }; }
 var btnBackup=document.getElementById('btnBackup'); if(btnBackup){ btnBackup.onclick=function(){ var blob=new Blob([JSON.stringify({people:people,peopleData:peopleData},null,2)],{type:'application/json'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='planning_backup_'+Date.now()+'.json'; a.click(); URL.revokeObjectURL(a.href); }; }
 var btnImport=document.getElementById('btnImport'); var fileImport=document.getElementById('fileImport'); if(btnImport && fileImport){ btnImport.onclick=function(){ fileImport.click(); }; fileImport.onchange=function(){ var f=fileImport.files[0]; if(!f) return; var rd=new FileReader(); rd.onload=function(){ try{ var data=JSON.parse(rd.result); if(data.people) people=data.people; if(data.peopleData) peopleData=data.peopleData; saveLocal(); renderSidebar(); render(); showToast('Import réussi'); }catch(e){ alert('Fichier invalide'); } }; rd.readAsText(f); }; }
 
-// ====== Tests rapides (non intrusifs) ======
-(function runDevTests(){ try{ console.info('[Tests] start');
-  // Helpers
-  console.assert(extractPlace('Colline 7h/12h')==='Colline','extract Colline');
-  console.assert(extractPlace(' promenade 9h/15h ').toLowerCase()==='promenade','extract promenade');
-  console.assert(extractPlace('grande arche 7h30/12h').toLowerCase().includes('arche'),'extract Grande Arche');
-  console.assert(parseTimeToHours('7h')===7,'parse 7h');
-  console.assert(parseTimeToHours('13h30')===13.5,'parse 13h30');
-  console.assert(computeHoursFromDetail('7h/12h - 13h30/21h30')===13,'hours 13');
-  console.assert(typeof renderSidebar==='function','renderSidebar defined');
-  console.assert(typeof render==='function','render defined');
-  // ensureMonth shape
-  var mstore=ensureMonth('Test',2025,7); console.assert(mstore && mstore.days && typeof mstore.days==='object','ensureMonth days object');
-  // mates test
-  var ppl=['A','B','C'];
-  var pdata={ A:{2025:{7:{days:{1:{detail:'Colline 7h/12h',type:'C',hours:5}}}}}, B:{2025:{7:{days:{1:{detail:'colline 9h/12h',type:'C',hours:3}}}}}, C:{2025:{7:{days:{1:{detail:'Promenade 7h/12h',type:'P',hours:5}}}}} };
-  function matesStandalone(o){ var r=[]; for(var i=0;i<ppl.length;i++){ var n=ppl[i]; if(n===o.currentName) continue; var st=pdata[n]&&pdata[n][o.year]&&pdata[n][o.month]; var inf=st&&st.days&&st.days[o.day]; if(!inf) continue; var pl=extractPlace(inf.detail||''); if(pl && pl.toLowerCase()===o.place.toLowerCase()) r.push(n);} return r; }
-  var r1=matesStandalone({year:2025,month:7,day:1,place:'Colline',currentName:'A'}); console.assert(JSON.stringify(r1)===JSON.stringify(['B']),'mates [B]');
-  // aggregate tests
-  peopleData={ Alice:{2025:{7:{days:{1:{detail:'Colline 7h/12h',type:'C',hours:5}}}}}, Bob:{2025:{7:{days:{1:{detail:'Promenade 7h/12h',type:'P',hours:5}}}}}, Charlie:{2025:{7:{days:{1:{detail:'Colline 9h/12h',type:'C',hours:3}}}}} };
-  var ag=aggregateDay(2025,7,1); console.assert(Array.isArray(ag['Colline']) && ag['Colline'].length===2,'aggregate colline count 2'); console.assert(Array.isArray(ag['Promenade']) && ag['Promenade'].length===1,'aggregate promenade count 1');
-  console.info('[Tests] ok'); }catch(e){ console.warn('[Tests] fail',e); } })();
+// Bouton Tout effacer
+var btnReset=document.getElementById('btnReset');
+if(btnReset){ btnReset.onclick=function(){
+  var ok=confirm('⚠️ Cette action est irréversible. Voulez-vous vraiment TOUT effacer (plannings et noms) ?');
+  if(!ok) return;
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(_){}
+  // Efface d'anciens noms de clés possibles (sécurité compat)
+  try{ localStorage.removeItem('planning_v1'); localStorage.removeItem('planning_simple'); }catch(_){}
+  // Réinitialise aussi l'état en mémoire puis rafraîchit totalement l'app
+  var DEFAULT_PEOPLE=['Momo','Lucas','Sabri','Sofiane','Hamid','Adama','Iddir','Karim','Azeddine'];
+  people=DEFAULT_PEOPLE.slice();
+  peopleData={};
+  current='Momo';
+  editing=false;
+  // rafraîchit l'UI immédiate
+  renderSidebar();
+  var g=document.getElementById('btnGeneral'); if(g) g.classList.remove('active');
+  render();
+  showToast('Données effacées');
+  // recharge pour garantir un état 100% propre
+  setTimeout(function(){ location.reload(); }, 120);
+}; }
+
+// ====== Test (non intrusifs)
+(function runDevTests(){
+  try{
+    console.info('[Tests] start');
+    // Helpers
+    console.assert(extractPlace('Colline 7h/12h')==='Colline','extract Colline');
+    console.assert(extractPlace(' promenade 9h/15h ').toLowerCase()==='promenade','extract promenade');
+    console.assert(extractPlace('grande arche 7h30/12h').toLowerCase().includes('arche'),'extract Grande Arche');
+    console.assert(parseTimeToHours('7h')===7,'parse 7h');
+    console.assert(parseTimeToHours('13h30')===13.5,'parse 13h30');
+    console.assert(parseTimeToHours('0h30')===0.5,'parse 0h30');
+    console.assert(computeHoursFromDetail('7h/12h - 13h30/21h30')===13,'hours 13');
+    console.assert(computeHoursFromDetail('9h/15h - 16h30/21h30')===11,'hours 11');
+    console.assert(extractPlace('Accueil 8h/12h')==='Accueil','extract Accueil');
+    console.assert(typeof renderSidebar==='function','renderSidebar defined');
+    console.assert(typeof render==='function','render defined');
+    // ensureMonth shape
+    var mstore=ensureMonth('Test',2025,7); console.assert(mstore && mstore.days && typeof mstore.days==='object','ensureMonth days object');
+    // mates test
+    var ppl=['A','B','C'];
+    var pdata={ A:{2025:{7:{days:{1:{detail:'Colline 7h/12h',type:'C',hours:5}}}}}, B:{2025:{7:{days:{1:{detail:'colline 9h/12h',type:'C',hours:3}}}}}, C:{2025:{7:{days:{1:{detail:'Promenade 7h/12h',type:'P',hours:5}}}}} };
+    function matesStandalone(o){ var r=[]; for(var i=0;i<ppl.length;i++){ var n=ppl[i]; if(n===o.currentName) continue; var st=pdata[n]&&pdata[n][o.year]&&pdata[n][o.month]; var inf=st&&st.days&&st.days[o.day]; if(!inf) continue; var pl=extractPlace(inf.detail||''); if(pl && pl.toLowerCase()===o.place.toLowerCase()) r.push(n);} return r; }
+    var r1=matesStandalone({year:2025,month:7,day:1,place:'Colline',currentName:'A'}); console.assert(JSON.stringify(r1)===JSON.stringify(['B']),'mates [B]');
+    // aggregate tests
+    var backupPeopleData = JSON.parse(JSON.stringify(peopleData));
+    peopleData={ Alice:{2025:{7:{days:{1:{detail:'Colline 7h/12h',type:'C',hours:5}}}}}, Bob:{2025:{7:{days:{1:{detail:'Promenade 7h/12h',type:'P',hours:5}}}}}, Charlie:{2025:{7:{days:{1:{detail:'Colline 9h/12h',type:'C',hours:3}}}}} };
+    var ag=aggregateDay(2025,7,1); console.assert(Array.isArray(ag['Colline']) && ag['Colline'].length===2,'aggregate colline count 2'); console.assert(Array.isArray(ag['Promenade']) && ag['Promenade'].length===1,'aggregate promenade count 1');
+    // empty aggregate day
+    peopleData={}; var agEmpty=aggregateDay(2025,7,2); console.assert(Object.keys(agEmpty).length===0,'aggregate empty');
+    // restore app data to backup (keep empty per spec of starting empty)
+    peopleData = {};// toggle edit button tests
+    (function(){
+      var prevCurrent = current, prevEditing = editing;
+      current = 'Momo'; editing = false; render();
+      var btn = document.getElementById('btnEdit');
+      if (btn){
+        btn.click();
+        console.assert(editing===true && btn.textContent.indexOf('Désactiver')>-1, 'btnEdit should enable and show Désactiver');
+        btn.click();
+        console.assert(editing===false && btn.textContent.indexOf('Activer')>-1, 'btnEdit should disable and show Activer');
+      }
+      current = prevCurrent; editing = prevEditing; render();
+    })();
+
+    // edit badge tests (non-blocking if element present)
+    (function(){
+      var b=document.getElementById('editBadge'); if(!b) return; var prevEditing=editing, prevCurrent=current;
+      current='Momo'; editing=false; render();
+      console.assert(b.style.display==='none','badge hidden when editing=false');
+      editing=true; render();
+      console.assert(b.style.display==='block','badge visible when editing=true and not general');
+      current='__ALL__'; render();
+      console.assert(b.style.display==='none','badge hidden in general view');
+      editing=prevEditing; current=prevCurrent; render();
+    })();
+
+    console.info('[Tests] ok');
+  }catch(e){ console.warn('[Tests] fail',e); }
+})();
 
 // ====== BOOT ======
 (function init(){
